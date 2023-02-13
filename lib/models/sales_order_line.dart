@@ -24,18 +24,20 @@ class SalesOrderLine {
     this.description,
     this.unitOfMeasureId,
     this.unitOfMeasureCode,
-    this.quantity,
-    this.unitPrice,
-    this.discountAmount,
-    this.discountPercent,
+    this.quantity = 0,
+    this.unitPrice = 0,
+    this.discountType,
+    this.discountAmount = 0,
+    this.discountPercent = 0,
     this.discountAppliedBeforeTax,
+    this.amountBeforeDiscount = 0,
     this.amountExcludingTax,
     this.taxCode,
     this.taxPercent,
     this.totalTaxAmount,
     this.amountIncludingTax,
     this.invoiceDiscountAllocation,
-    this.netAmount,
+    this.netAmount = 0,
     this.netTaxAmount,
     this.netAmountIncludingTax,
     this.shipmentDate,
@@ -44,11 +46,12 @@ class SalesOrderLine {
     this.invoiceQuantity,
     this.shipQuantity,
     this.itemVariantId,
+    this.isFree = false,
   });
 
   String? id;
   String? documentId;
-  String? sequence;
+  int? sequence = 0;
   String? itemId;
   String? accountId;
   String? lineType;
@@ -56,31 +59,34 @@ class SalesOrderLine {
   String? description;
   String? unitOfMeasureId;
   String? unitOfMeasureCode;
-  String? quantity;
-  String? unitPrice;
-  String? discountAmount;
-  String? discountPercent;
-  String? discountAppliedBeforeTax;
-  String? amountExcludingTax;
+  double? quantity = 0;
+  double? unitPrice = 0;
+  String? discountType = 'PER';
+  double? discountAmount = 0;
+  double? discountPercent = 0;
+  bool? discountAppliedBeforeTax;
+  double? amountExcludingTax;
   String? taxCode;
-  String? taxPercent;
-  String? totalTaxAmount;
-  String? amountIncludingTax;
-  String? invoiceDiscountAllocation;
-  String? netAmount;
-  String? netTaxAmount;
-  String? netAmountIncludingTax;
-  String? shipmentDate;
-  String? shippedQuantity;
-  String? invoicedQuantity;
-  String? invoiceQuantity;
-  String? shipQuantity;
+  double? taxPercent;
+  double? totalTaxAmount;
+  double? amountIncludingTax;
+  double? amountBeforeDiscount;
+  double? invoiceDiscountAllocation;
+  double netAmount = 0;
+  double? netTaxAmount;
+  double? netAmountIncludingTax;
+  DateTime? shipmentDate;
+  double? shippedQuantity;
+  double? invoicedQuantity;
+  double? invoiceQuantity;
+  double? shipQuantity;
   String? itemVariantId;
+  bool isFree = false;
 
   SalesOrderLine copyWith({
     String? id,
     String? documentId,
-    String? sequence,
+    int? sequence,
     String? itemId,
     String? accountId,
     String? lineType,
@@ -88,26 +94,29 @@ class SalesOrderLine {
     String? description,
     String? unitOfMeasureId,
     String? unitOfMeasureCode,
-    String? quantity,
-    String? unitPrice,
-    String? discountAmount,
-    String? discountPercent,
-    String? discountAppliedBeforeTax,
-    String? amountExcludingTax,
+    double? quantity,
+    double? unitPrice,
+    String? discountType,
+    double? discountAmount,
+    double? discountPercent,
+    bool? discountAppliedBeforeTax,
+    double? amountBeforeDiscount,
+    double? amountExcludingTax,
     String? taxCode,
-    String? taxPercent,
-    String? totalTaxAmount,
-    String? amountIncludingTax,
-    String? invoiceDiscountAllocation,
-    String? netAmount,
-    String? netTaxAmount,
-    String? netAmountIncludingTax,
-    String? shipmentDate,
-    String? shippedQuantity,
-    String? invoicedQuantity,
-    String? invoiceQuantity,
-    String? shipQuantity,
+    double? taxPercent,
+    double? totalTaxAmount,
+    double? amountIncludingTax,
+    double? invoiceDiscountAllocation,
+    double? netAmount,
+    double? netTaxAmount,
+    double? netAmountIncludingTax,
+    DateTime? shipmentDate,
+    double? shippedQuantity,
+    double? invoicedQuantity,
+    double? invoiceQuantity,
+    double? shipQuantity,
     String? itemVariantId,
+    bool isFree = false,
   }) =>
       SalesOrderLine(
         id: id ?? this.id,
@@ -122,9 +131,11 @@ class SalesOrderLine {
         unitOfMeasureCode: unitOfMeasureCode ?? this.unitOfMeasureCode,
         quantity: quantity ?? this.quantity,
         unitPrice: unitPrice ?? this.unitPrice,
+        discountType: discountType ?? this.discountType,
         discountAmount: discountAmount ?? this.discountAmount,
         discountPercent: discountPercent ?? this.discountPercent,
         discountAppliedBeforeTax: discountAppliedBeforeTax ?? this.discountAppliedBeforeTax,
+        amountBeforeDiscount: amountBeforeDiscount ?? this.amountBeforeDiscount,
         amountExcludingTax: amountExcludingTax ?? this.amountExcludingTax,
         taxCode: taxCode ?? this.taxCode,
         taxPercent: taxPercent ?? this.taxPercent,
@@ -140,6 +151,7 @@ class SalesOrderLine {
         invoiceQuantity: invoiceQuantity ?? this.invoiceQuantity,
         shipQuantity: shipQuantity ?? this.shipQuantity,
         itemVariantId: itemVariantId ?? this.itemVariantId,
+        isFree: isFree,
       );
 
   factory SalesOrderLine.fromJson(Map<String, dynamic> json) => SalesOrderLine(
@@ -155,23 +167,24 @@ class SalesOrderLine {
     unitOfMeasureCode: json["unitOfMeasureCode"] == null ? null : json["unitOfMeasureCode"],
     quantity: json["quantity"] == null ? null : json["quantity"],
     unitPrice: json["unitPrice"] == null ? null : json["unitPrice"],
+    discountType: json["discountType"] == null ? null : json["discountType"],
     discountAmount: json["discountAmount"] == null ? null : json["discountAmount"],
     discountPercent: json["discountPercent"] == null ? null : json["discountPercent"],
     discountAppliedBeforeTax: json["discountAppliedBeforeTax"] == null ? null : json["discountAppliedBeforeTax"],
     amountExcludingTax: json["amountExcludingTax"] == null ? null : json["amountExcludingTax"],
     taxCode: json["taxCode"] == null ? null : json["taxCode"],
-    taxPercent: json["taxPercent"] == null ? null : json["taxPercent"],
-    totalTaxAmount: json["totalTaxAmount"] == null ? null : json["totalTaxAmount"],
-    amountIncludingTax: json["amountIncludingTax"] == null ? null : json["amountIncludingTax"],
-    invoiceDiscountAllocation: json["invoiceDiscountAllocation"] == null ? null : json["invoiceDiscountAllocation"],
-    netAmount: json["netAmount"] == null ? null : json["netAmount"],
-    netTaxAmount: json["netTaxAmount"] == null ? null : json["netTaxAmount"],
-    netAmountIncludingTax: json["netAmountIncludingTax"] == null ? null : json["netAmountIncludingTax"],
+    taxPercent: json["taxPercent"] == null ? null : json["taxPercent"].toDouble(),
+    totalTaxAmount: json["totalTaxAmount"] == null ? null : json["totalTaxAmount"].toDouble(),
+    amountIncludingTax: json["amountIncludingTax"] == null ? null : json["amountIncludingTax"].toDouble(),
+    invoiceDiscountAllocation: json["invoiceDiscountAllocation"] == null ? null : json["invoiceDiscountAllocation"].toDouble(),
+    netAmount: json["netAmount"] == null ? null : json["netAmount"].toDouble(),
+    netTaxAmount: json["netTaxAmount"] == null ? null : json["netTaxAmount"].toDouble(),
+    netAmountIncludingTax: json["netAmountIncludingTax"] == null ? null : json["netAmountIncludingTax"].toDouble(),
     shipmentDate: json["shipmentDate"] == null ? null : json["shipmentDate"],
-    shippedQuantity: json["shippedQuantity"] == null ? null : json["shippedQuantity"],
-    invoicedQuantity: json["invoicedQuantity"] == null ? null : json["invoicedQuantity"],
-    invoiceQuantity: json["invoiceQuantity"] == null ? null : json["invoiceQuantity"],
-    shipQuantity: json["shipQuantity"] == null ? null : json["shipQuantity"],
+    shippedQuantity: json["shippedQuantity"] == null ? null : json["shippedQuantity"].toDouble(),
+    invoicedQuantity: json["invoicedQuantity"] == null ? null : json["invoicedQuantity"].toDouble(),
+    invoiceQuantity: json["invoiceQuantity"] == null ? null : json["invoiceQuantity"].toDouble(),
+    shipQuantity: json["shipQuantity"] == null ? null : json["shipQuantity"].toDouble(),
     itemVariantId: json["itemVariantId"] == null ? null : json["itemVariantId"],
   );
 
@@ -210,27 +223,40 @@ class SalesOrderLine {
 }
 
 class SalesOrderLineNotifier extends StateNotifier<List<SalesOrderLine>> {
-  SalesOrderLineNotifier(super.state);
+  SalesOrderLineNotifier(): super([]);
 
   List<SalesOrderLine> get() {
     return state;
   }
 
-  void add(SalesOrderLine item) {
-    state = [...state, item];
+  void add(SalesOrderLine object) {
+    state = [...state, object];
   }
 
-  void edit(SalesOrderLine item) {
+  void edit(SalesOrderLine object) {
     state = [
-      for(var row in state)
-        if(row.id == item.id)
-          row = item
+      for(var element in state)
+        if(element.id == object.id)
+          element = object
         else
-          row
+          element
     ];
   }
 
-  void remove(SalesOrderLine item) {
-    state.removeWhere((e) => e.id == item.id);
+  void remove(SalesOrderLine object) {
+    state = [
+      for (final element in state)
+        if (element.id != object.id) element,
+    ];
+
+    int i = 1;
+    for (SalesOrderLine element in state) {
+      element.sequence = i++;
+    }
   }
 }
+
+// Finally, we are using StateNotifierProvider to allow the UI to interact
+final salesOrderLineProvider = StateNotifierProvider<SalesOrderLineNotifier, List<SalesOrderLine>>((ref) {
+  return SalesOrderLineNotifier();
+});

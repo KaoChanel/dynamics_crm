@@ -23,7 +23,7 @@ import 'package:dynamics_crm/config/global_constants.dart';
 // FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 
 class Launcher extends StatefulWidget {
-  Launcher({ required this.pageIndex });
+  Launcher({super.key,  required this.pageIndex });
   int pageIndex;
 
   @override
@@ -36,17 +36,17 @@ class _LauncherState extends State<Launcher> {
   int initialIndex = MY_COMPANY.displayName != 'IDEXX' ? 2 : 1;
 
   late PageController _pageController;
-  List<Widget> _pageWidget = MY_COMPANY.displayName != 'IDEXX' ? <Widget>[
-    Home(),
-    Report(),
-    Profile(),
+  final List<Widget> _pageWidget = MY_COMPANY.displayName != 'IDEXX' ? <Widget>[
+    const Home(),
+    const Report(),
+    const Profile(),
   ]
       : <Widget>[
-    Home(),
-    Profile(),
+    const Home(),
+    const Profile(),
   ];
 
-  List<BottomNavigationBarItem> _menuBar = MY_COMPANY != 'IDEXX' ? <BottomNavigationBarItem>[
+  final List<BottomNavigationBarItem> _menuBar = MY_COMPANY.name != 'IDEXX' ? <BottomNavigationBarItem>[
     const BottomNavigationBarItem(
       icon: Icon(Icons.home),
       label: 'Main',
@@ -55,14 +55,15 @@ class _LauncherState extends State<Launcher> {
       icon: Icon(Icons.bar_chart),
       label: 'Report',
     ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.info_outline_rounded),
-      label: 'News',
-    ),
+    // const BottomNavigationBarItem(
+    //   icon: Icon(Icons.info_outline_rounded),
+    //   label: 'News',
+    // ),
     const BottomNavigationBarItem(
       icon: Icon(Icons.person_rounded),
       label: 'Profile',
-    )]
+    )
+  ]
       : <BottomNavigationBarItem>[
     const BottomNavigationBarItem(
       icon: Icon(Icons.home),
@@ -192,17 +193,17 @@ class _LauncherState extends State<Launcher> {
 
     getToken();
 
-    FirebaseMessaging.instance
-        .getInitialMessage()
-        .then((RemoteMessage? message) {
-      if (message != null) {
-        // Navigator.pushNamed(
-        //   context,
-        //   '/message',
-        //   arguments: MessageArguments(message, true),
-        // );
-      }
-    });
+    // FirebaseMessaging.instance
+    //     .getInitialMessage()
+    //     .then((RemoteMessage? message) {
+    //   if (message != null) {
+    //     // Navigator.pushNamed(
+    //     //   context,
+    //     //   '/message',
+    //     //   arguments: MessageArguments(message, true),
+    //     // );
+    //   }
+    // });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
 

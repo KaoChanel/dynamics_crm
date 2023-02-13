@@ -14,6 +14,7 @@ class Customer {
   Customer({
     this.id,
     this.number,
+    this.code,
     this.displayName,
     this.type,
     this.addressLine1,
@@ -22,6 +23,8 @@ class Customer {
     this.state,
     this.country,
     this.postalCode,
+    this.latitude,
+    this.longitude,
     this.phoneNumber,
     this.email,
     this.website,
@@ -34,20 +37,23 @@ class Customer {
     this.paymentTermsId,
     this.shipmentMethodId,
     this.paymentMethodId,
-    this.blocked,
+    this.blocked = 'All',
     this.lastModifiedDateTime,
   });
 
   String? id;
   String? number;
+  String? code;
   String? displayName;
-  String? type;
+  String? type;                  /// Specifies the type of customer, can be "Company" or "Person".
   String? addressLine1;
   String? addressLine2;
   String? city;
   String? state;
   String? country;
   String? postalCode;
+  String? latitude;
+  String? longitude;
   String? phoneNumber;
   String? email;
   String? website;
@@ -60,12 +66,13 @@ class Customer {
   String? paymentTermsId;
   String? shipmentMethodId;
   String? paymentMethodId;
-  String? blocked;
+  String blocked = 'All';                   /// Specifies the type of customer, can be "Ship", "Invoice" or "All".
   DateTime? lastModifiedDateTime;
 
   Customer copyWith({
     String? id,
     String? number,
+    String? code,
     String? displayName,
     String? type,
     String? addressLine1,
@@ -74,6 +81,8 @@ class Customer {
     String? state,
     String? country,
     String? postalCode,
+    String? latitude,
+    String? longitude,
     String? phoneNumber,
     String? email,
     String? website,
@@ -92,6 +101,7 @@ class Customer {
       Customer(
         id: id ?? this.id,
         number: number ?? this.number,
+        code: code ?? this.code,
         displayName: displayName ?? this.displayName,
         type: type ?? this.type,
         addressLine1: addressLine1 ?? this.addressLine1,
@@ -100,6 +110,8 @@ class Customer {
         state: state ?? this.state,
         country: country ?? this.country,
         postalCode: postalCode ?? this.postalCode,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
         phoneNumber: phoneNumber ?? this.phoneNumber,
         email: email ?? this.email,
         website: website ?? this.website,
@@ -119,6 +131,7 @@ class Customer {
   factory Customer.fromJson(Map<String, dynamic> json) => Customer(
     id: json["id"] == null ? null : json["id"],
     number: json["number"] == null ? null : json["number"],
+    code: json["code"] == null ? null : json["code"],
     displayName: json["displayName"] == null ? null : json["displayName"],
     type: json["type"] == null ? null : json["type"],
     addressLine1: json["addressLine1"] == null ? null : json["addressLine1"],
@@ -127,6 +140,8 @@ class Customer {
     state: json["state"] == null ? null : json["state"],
     country: json["country"] == null ? null : json["country"],
     postalCode: json["postalCode"] == null ? null : json["postalCode"],
+    latitude: json["latitude"] == null ? null : json["latitude"],
+    longitude: json["longitude"] == null ? null : json["longitude"],
     phoneNumber: json["phoneNumber"] == null ? null : json["phoneNumber"],
     email: json["email"] == null ? null : json["email"],
     website: json["website"] == null ? null : json["website"],
@@ -146,6 +161,7 @@ class Customer {
   Map<String, dynamic> toJson() => {
     "id": id == null ? null : id,
     "number": number == null ? null : number,
+    "code": code == null ? null : code,
     "displayName": displayName == null ? null : displayName,
     "type": type == null ? null : type,
     "addressLine1": addressLine1 == null ? null : addressLine1,
@@ -154,6 +170,8 @@ class Customer {
     "state": state == null ? null : state,
     "country": country == null ? null : country,
     "postalCode": postalCode == null ? null : postalCode,
+    "latitude": latitude == null ? null : latitude,
+    "longitude": longitude == null ? null : longitude,
     "phoneNumber": phoneNumber == null ? null : phoneNumber,
     "email": email == null ? null : email,
     "website": website == null ? null : website,

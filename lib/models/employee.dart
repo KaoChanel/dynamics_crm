@@ -12,6 +12,7 @@ class Employee {
   Employee({
     this.id,
     this.number,
+    this.code,
     this.displayName,
     this.givenName,
     this.middleName,
@@ -37,6 +38,7 @@ class Employee {
 
   String? id;
   String? number;
+  String? code;
   String? displayName;
   String? givenName;
   String? middleName;
@@ -62,6 +64,7 @@ class Employee {
   Employee copyWith({
     String? id,
     String? number,
+    String? code,
     String? displayName,
     String? givenName,
     String? middleName,
@@ -87,6 +90,7 @@ class Employee {
       Employee(
         id: id ?? this.id,
         number: number ?? this.number,
+        code: code ?? this.code,
         displayName: displayName ?? this.displayName,
         givenName: givenName ?? this.givenName,
         middleName: middleName ?? this.middleName,
@@ -113,6 +117,7 @@ class Employee {
   factory Employee.fromJson(Map<String, dynamic> json) => Employee(
     id: json["id"] == null ? null : json["id"],
     number: json["number"] == null ? null : json["number"],
+    code: json["code"] == null ? null : json["code"],
     displayName: json["displayName"] == null ? null : json["displayName"],
     givenName: json["givenName"] == null ? null : json["givenName"],
     middleName: json["middleName"] == null ? null : json["middleName"],
@@ -139,6 +144,7 @@ class Employee {
   Map<String, dynamic> toJson() => {
     "id": id == null ? null : id,
     "number": number == null ? null : number,
+    "code": code == null ? null : code,
     "displayName": displayName == null ? null : displayName,
     "givenName": givenName == null ? null : givenName,
     "middleName": middleName == null ? null : middleName,

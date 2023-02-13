@@ -29,11 +29,13 @@ class SalesOrder {
     this.salesperson,
     this.partialShipping,
     this.requestedDeliveryDate,
+    this.discountType,
     this.discountAmount,
     this.discountAppliedBeforeTax,
     this.totalAmountExcludingTax,
     this.totalTaxAmount,
     this.totalAmountIncludingTax,
+    this.netAmount = 0,
     this.fullyShipped,
     this.status,
     this.lastModifiedDateTime,
@@ -41,6 +43,7 @@ class SalesOrder {
 
   String? id;
   String? number;
+  String? referenceNumber;
   DateTime? orderDate;
   String? customerId;
   String? contactId;
@@ -49,18 +52,21 @@ class SalesOrder {
   BillingPostalAddress? billingPostalAddress;
   String? currencyId;
   String? currencyCode;
-  bool? pricesIncludeTax;
+  bool? pricesIncludeTax = false;
   String? paymentTermsId;
   String? salesperson;
   bool? partialShipping;
   DateTime? requestedDeliveryDate;
-  int? discountAmount;
+  String? discountType;
+  double? discountAmount = 0;
   bool? discountAppliedBeforeTax;
-  double? totalAmountExcludingTax;
-  double? totalTaxAmount;
-  double? totalAmountIncludingTax;
-  bool? fullyShipped;
-  String? status;
+  double? totalAmountExcludingTax = 0;
+  double? totalTaxAmount = 0;
+  double? totalAmountIncludingTax = 0;
+  double netAmount = 0;
+  bool? fullyShipped = false;
+  String? status = 'OPEN';
+  String? lastDocumentNumber;
   DateTime? lastModifiedDateTime;
 
   SalesOrder copyWith({
@@ -79,12 +85,14 @@ class SalesOrder {
     String? salesperson,
     bool? partialShipping,
     DateTime? requestedDeliveryDate,
-    int? discountAmount,
+    String? discountType,
+    double? discountAmount = 0,
     bool? discountAppliedBeforeTax,
-    double? totalAmountExcludingTax,
-    double? totalTaxAmount,
-    double? totalAmountIncludingTax,
-    bool? fullyShipped,
+    double? totalAmountExcludingTax = 0,
+    double? totalTaxAmount = 0,
+    double? totalAmountIncludingTax = 0,
+    double? netAmount = 0,
+    bool? fullyShipped = false,
     String? status,
     DateTime? lastModifiedDateTime,
   }) =>
@@ -104,11 +112,13 @@ class SalesOrder {
         salesperson: salesperson ?? this.salesperson,
         partialShipping: partialShipping ?? this.partialShipping,
         requestedDeliveryDate: requestedDeliveryDate ?? this.requestedDeliveryDate,
+        discountType: discountType ?? this.discountType,
         discountAmount: discountAmount ?? this.discountAmount,
         discountAppliedBeforeTax: discountAppliedBeforeTax ?? this.discountAppliedBeforeTax,
         totalAmountExcludingTax: totalAmountExcludingTax ?? this.totalAmountExcludingTax,
         totalTaxAmount: totalTaxAmount ?? this.totalTaxAmount,
         totalAmountIncludingTax: totalAmountIncludingTax ?? this.totalAmountIncludingTax,
+        netAmount: netAmount ?? this.netAmount,
         fullyShipped: fullyShipped ?? this.fullyShipped,
         status: status ?? this.status,
         lastModifiedDateTime: lastModifiedDateTime ?? this.lastModifiedDateTime,
@@ -130,11 +140,13 @@ class SalesOrder {
     salesperson: json["salesperson"] == null ? null : json["salesperson"],
     partialShipping: json["partialShipping"] == null ? null : json["partialShipping"],
     requestedDeliveryDate: json["requestedDeliveryDate"] == null ? null : DateTime.parse(json["requestedDeliveryDate"]),
-    discountAmount: json["discountAmount"] == null ? null : json["discountAmount"],
+    discountType: json["discountType"] == null ? null : json["discountType"],
+    discountAmount: json["discountAmount"] == null ? null : json["discountAmount"].toDouble(),
     discountAppliedBeforeTax: json["discountAppliedBeforeTax"] == null ? null : json["discountAppliedBeforeTax"],
     totalAmountExcludingTax: json["totalAmountExcludingTax"] == null ? null : json["totalAmountExcludingTax"].toDouble(),
     totalTaxAmount: json["totalTaxAmount"] == null ? null : json["totalTaxAmount"].toDouble(),
     totalAmountIncludingTax: json["totalAmountIncludingTax"] == null ? null : json["totalAmountIncludingTax"].toDouble(),
+    netAmount: json["netAmount"] == null ? null : json["netAmount"].toDouble(),
     fullyShipped: json["fullyShipped"] == null ? null : json["fullyShipped"],
     status: json["status"] == null ? null : json["status"],
     lastModifiedDateTime: json["lastModifiedDateTime"] == null ? null : DateTime.parse(json["lastModifiedDateTime"]),
@@ -156,11 +168,13 @@ class SalesOrder {
     "salesperson": salesperson == null ? null : salesperson,
     "partialShipping": partialShipping == null ? null : partialShipping,
     "requestedDeliveryDate": requestedDeliveryDate == null ? null : "${requestedDeliveryDate!.year.toString().padLeft(4, '0')}-${requestedDeliveryDate!.month.toString().padLeft(2, '0')}-${requestedDeliveryDate!.day.toString().padLeft(2, '0')}",
+    "discountType": discountType == null ? null : discountType,
     "discountAmount": discountAmount == null ? null : discountAmount,
     "discountAppliedBeforeTax": discountAppliedBeforeTax == null ? null : discountAppliedBeforeTax,
     "totalAmountExcludingTax": totalAmountExcludingTax == null ? null : totalAmountExcludingTax,
     "totalTaxAmount": totalTaxAmount == null ? null : totalTaxAmount,
     "totalAmountIncludingTax": totalAmountIncludingTax == null ? null : totalAmountIncludingTax,
+    "netAmount": netAmount == null ? null : netAmount,
     "fullyShipped": fullyShipped == null ? null : fullyShipped,
     "status": status == null ? null : status,
     "lastModifiedDateTime": lastModifiedDateTime == null ? null : lastModifiedDateTime!.toIso8601String(),
@@ -214,28 +228,18 @@ class BillingPostalAddress {
   };
 }
 
-class SalesOrderNotifier extends StateNotifier<List<SalesOrder>> {
-  SalesOrderNotifier(super.state);
+class SalesOrderNotifier extends StateNotifier<SalesOrder> {
+  SalesOrderNotifier(): super(SalesOrder());
 
-  List<SalesOrder> get() {
+  SalesOrder get() {
     return state;
   }
 
-  void add(SalesOrder item) {
-    state = [...state, item];
-  }
-
   void edit(SalesOrder item) {
-    state = [
-      for(var row in state)
-        if(row.id == item.id)
-          row = item
-        else
-          row
-    ];
+    state = item;
   }
 
   void remove(SalesOrder item) {
-    state.removeWhere((e) => e.id == item.id);
+    state = SalesOrder();
   }
 }

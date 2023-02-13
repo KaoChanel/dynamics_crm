@@ -48,7 +48,7 @@ class ApiService {
       HttpHeaders.authorizationHeader: 'Bearer $accessToken',
     });
     if (response.statusCode != 200) {
-      throw Exception('Failed to load customer');
+      throw Exception('Failed to load customer.');
     }
     return customerFromJson(json.decode(response.body));
   }
@@ -60,10 +60,23 @@ class ApiService {
     });
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to load my customers');
+      throw Exception('Failed to load my customers.');
     }
 
     return customerListFromJson(json.decode(response.body));
+  }
+
+  Future<List<SalesOrder>> getMyOrders(String employeeId) async {
+    final uri = Uri.parse(CUSTOMER_API);
+    final response = await httpClient.get(uri, headers: {
+      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load my orders.');
+    }
+
+    return salesOrderListFromJson(json.decode(response.body));
   }
 
   Future<EmployeeOption?> getEmployeeOption() async {
@@ -123,9 +136,9 @@ class ApiService {
 
       employeeOption = await addEmployeeOptions(employeeOption);
       //print('Add EmployeeOption result: EmpID :${tbmEmployeeOption.empId}');
-      return TaskEvent(isComplete : true, eventCode : 0, title : 'Post Complete', message : 'Complete : ${employeeOption?.empId}');
+      return TaskEvent(isComplete: true, eventCode: 0, title: 'Option Create', message: 'Create was complete: ${employeeOption?.empId}');
     } catch (e) {
-      return TaskEvent(isComplete : false, eventCode : 0, title : 'Post Exception', message : e.toString());
+      return TaskEvent(isComplete: false, eventCode: 0, title: 'Option Create Exception', message: e.toString());
     }
   }
 
@@ -155,6 +168,7 @@ class ApiService {
       return null;
     }
   }
+
   Future<TaskEvent> putEmployeeOption(String emailAlertAppointment) async {
     try {
       var tbmEmployeeOption = EmployeeOption()
@@ -170,9 +184,9 @@ class ApiService {
 
       await updateEmployeeOption(tbmEmployeeOption);
       print('Update result: ${tbmEmployeeOption.empId}');
-      return TaskEvent(isComplete : true, eventCode : 0, title : 'Put Complete', message : 'Complete : ${tbmEmployeeOption.empId}');
+      return TaskEvent(isComplete: true, eventCode: 0, title: 'Option Update', message: 'Complete : ${tbmEmployeeOption.empId}');
     } catch (e) {
-      return TaskEvent(isComplete : false, eventCode : 0, title : 'Put Exception', message : e.toString());
+      return TaskEvent(isComplete: false, eventCode: 0, title: 'Option Update Exception', message: e.toString());
     }
   }
 

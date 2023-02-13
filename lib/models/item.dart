@@ -15,6 +15,7 @@ String itemToJson(Item data) => json.encode(data.toJson());
 class Item {
   Item({
     this.id,
+    this.code,
     this.number,
     this.displayName,
     this.type,
@@ -22,10 +23,11 @@ class Item {
     this.itemCategoryCode,
     this.blocked,
     this.gtin,
-    this.inventory,
-    this.unitPrice,
+    this.inventory = 0,
     this.priceIncludesTax,
-    this.unitCost,
+    this.unitPrice = 0,
+    this.unitCost = 0,
+    this.vatRate,
     this.taxGroupId,
     this.taxGroupCode,
     this.baseUnitOfMeasureId,
@@ -34,6 +36,7 @@ class Item {
   });
 
   String? id;
+  String? code;
   String? number;
   String? displayName;
   String? type;
@@ -42,9 +45,10 @@ class Item {
   bool? blocked;
   String? gtin;
   int? inventory;
-  double? unitPrice;
   bool? priceIncludesTax;
+  double? unitPrice;
   double? unitCost;
+  double? vatRate;
   String? taxGroupId;
   String? taxGroupCode;
   String? baseUnitOfMeasureId;
@@ -53,6 +57,7 @@ class Item {
 
   Item copyWith({
     String? id,
+    String? code,
     String? number,
     String? displayName,
     String? type,
@@ -62,6 +67,7 @@ class Item {
     String? gtin,
     int? inventory,
     double? unitPrice,
+    double? vatRate,
     bool? priceIncludesTax,
     double? unitCost,
     String? taxGroupId,
@@ -72,6 +78,7 @@ class Item {
   }) =>
       Item(
         id: id ?? this.id,
+        code: code ?? this.id,
         number: number ?? this.number,
         displayName: displayName ?? this.displayName,
         type: type ?? this.type,
@@ -81,6 +88,7 @@ class Item {
         gtin: gtin ?? this.gtin,
         inventory: inventory ?? this.inventory,
         unitPrice: unitPrice ?? this.unitPrice,
+        vatRate: vatRate ?? this.vatRate,
         priceIncludesTax: priceIncludesTax ?? this.priceIncludesTax,
         unitCost: unitCost ?? this.unitCost,
         taxGroupId: taxGroupId ?? this.taxGroupId,
@@ -92,6 +100,7 @@ class Item {
 
   factory Item.fromJson(Map<String, dynamic> json) => Item(
     id: json["id"] == null ? null : json["id"],
+    code: json["code"] == null ? null : json["code"],
     number: json["number"] == null ? null : json["number"],
     displayName: json["displayName"] == null ? null : json["displayName"],
     type: json["type"] == null ? null : json["type"],
@@ -112,6 +121,7 @@ class Item {
 
   Map<String, dynamic> toJson() => {
     "id": id == null ? null : id,
+    "code": code == null ? null : code,
     "number": number == null ? null : number,
     "displayName": displayName == null ? null : displayName,
     "type": type == null ? null : type,
@@ -134,21 +144,28 @@ class Item {
 class ItemNotifier extends StateNotifier<List<Item>> {
   ItemNotifier(super.state);
 
-  void add(Item item) {
-    state = [...state, item];
+  void add(Item object) {
+    state = [...state, object];
   }
 
-  void edit(Item item) {
+  void addList(List<Item> elements) {
+    state = elements;
+  }
+
+  void edit(Item object) {
     state = [
       for(var row in state)
-        if(row.id == item.id)
-          row = item
+        if(row.id == object.id)
+          row = object
         else
           row
     ];
   }
 
-  void remove(Item item) {
-    state.removeWhere((e) => e.id == item.id);
+  void remove(Item object) {
+    state = [
+      for (final element in state)
+        if (element.id != object.id) element,
+    ];
   }
 }

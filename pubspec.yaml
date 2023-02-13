@@ -1,5 +1,5 @@
 name: dynamics_crm
-description: A new SmartSalesBIS project work with Dynamics 365.
+description: A new (SmartSales BIS) app work with Dynamics 365.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -37,14 +37,26 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.5
   http: ^0.13.5
+  intl: ^0.17.0
+  badges: ^2.0.3
   shared_preferences: ^2.0.15
+  firebase_core: ^2.4.1
   firebase_messaging: ^14.1.4
   awesome_dialog: ^3.0.2
   location: ^4.4.0
   url_launcher: ^6.1.7
   file_picker: ^5.2.4
   quickalert: ^1.0.1
+  google_fonts: ^3.0.1
+  fluttertoast: ^8.1.2
   flutter_riverpod: ^2.1.3
+  flutter_local_notifications: ^13.0.0
+  open_filex: ^4.3.2
+  syncfusion_flutter_pdfviewer: ^20.4.42
+  photo_view: ^0.14.0
+  image_picker: ^0.8.6
+  google_maps_flutter: ^2.2.3
+  flutter_datetime_picker: ^1.5.1
 
 dev_dependencies:
   flutter_test:
@@ -98,3 +110,70 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+
+  assets:
+    - assets/biosci_logo.png
+    - assets/bisgroup-logo.png
+    - assets/new-bisgroup-logo.png
+    - assets/bisgroup_logo_white.png
+    - assets/bisgroup_logo_contrast.png
+    - assets/business_drawing.jpg
+    - assets/business_click.jpg
+    - assets/business_checkmap.jpg
+    - assets/business_checkmap2.jpg
+    - assets/business_checkmap3.jpg
+    - assets/business_checkmap4.jpg
+    - assets/business_marketing.jpg
+    - assets/business_support.jpg
+    - assets/business_inventory.jpg
+    - assets/bg_nic.jpg
+    - assets/work_schedule.jpg
+    - assets/work_schedule_02.jpg
+    - assets/work_schedule_03.jpg
+    - assets/sales_quotation.jpg
+    - assets/shakehand_01.jpg
+    - assets/shakehand_02.jpg
+    - assets/shakehand_03.jpg
+    - assets/order_01.jpg
+    - assets/order_02.jpg
+    - assets/order_03.jpg
+    - assets/goods_return.jpg
+    - assets/analysis_01.jpg
+    - assets/analysis_02.jpg
+    - assets/analysis_03.jpg
+    - assets/analysis_04.jpg
+    - assets/analysis_05.jpg
+    - assets/cloud_01.jpg
+    - assets/cloud_02.jpg
+    - assets/avatar_01.png
+    - assets/bg_01.jpg
+    - assets/bg_02.jpg
+    - assets/bg_03.jpg
+    - assets/bg_04.jpg
+    - assets/bg_05.jpg
+    - assets/document_01.jpg
+    - assets/sales_quotation_01.jpg
+    - assets/sales_quotation_02.png
+    - assets/checkup_farm.jpg
+    - assets/visit_01.jpg
+    - assets/visit_02.jpg
+    - assets/visit_03.jpg
+    - assets/checkin_01.jpg
+    - assets/overdue.png
+    - assets/overdue_01.jpg
+    - assets/overdue_02.jpg
+    - assets/cash_stacked.jpg
+    - assets/cash_stacked_300.jpg
+    - assets/cash_stacked_128.jpg
+    - assets/document_status_01.png
+    - assets/invoices_01.jpg
+    #- assets/bisgroup_logo.jpg
+    - assets/point-blue-40x40.png
+    - assets/logo/bio.png
+    - assets/logo/nic.png
+    - assets/logo/ptk.png
+    - assets/logo/ptk_black.png
+    - assets/logo/pedex.png
+    - assets/logo/pedex.jpg
+    - assets/thailand.json
+    - assets/thailand_information/thailand.json

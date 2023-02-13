@@ -52,6 +52,7 @@ class SalesShipment {
     this.lastModifiedDateTime,
     this.phoneNumber,
     this.email,
+    this.remark
   });
 
   String? id;
@@ -94,6 +95,7 @@ class SalesShipment {
   String? lastModifiedDateTime;
   String? phoneNumber;
   String? email;
+  String? remark;
 
   SalesShipment copyWith({
     String? id,
@@ -136,6 +138,7 @@ class SalesShipment {
     String? lastModifiedDateTime,
     String? phoneNumber,
     String? email,
+    String? remark
   }) =>
       SalesShipment(
         id: id ?? this.id,
@@ -178,6 +181,7 @@ class SalesShipment {
         lastModifiedDateTime: lastModifiedDateTime ?? this.lastModifiedDateTime,
         phoneNumber: phoneNumber ?? this.phoneNumber,
         email: email ?? this.email,
+        remark: remark ?? this.remark
       );
 
   factory SalesShipment.fromJson(Map<String, dynamic> json) => SalesShipment(

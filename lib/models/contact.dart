@@ -37,7 +37,7 @@ class Contact {
 
   String? id;
   String? number;
-  String? type;
+  String? type;             /// Specifies the type of contact, can be "Company" or "Person".
   String? displayName;
   String? companyNumber;
   String? companyName;
