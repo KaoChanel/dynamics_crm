@@ -4,7 +4,7 @@ import 'package:dynamics_crm/models/item.dart';
 import 'package:dynamics_crm/providers/data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamics_crm/config/global_constants.dart';
-import 'package:dynamics_crm/models/document_type.dart';
+import 'package:dynamics_crm/models/activity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'item_add_portrait.dart';
@@ -12,7 +12,7 @@ import 'item_add_portrait.dart';
 class ItemSelect extends ConsumerStatefulWidget {
   const ItemSelect({super.key, required this.type});
 
-  final DocumentType type;
+  final Activity type;
 
   @override
   ConsumerState<ItemSelect> createState() => _ItemSelectState();

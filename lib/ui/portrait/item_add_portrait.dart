@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:dynamics_crm/widgets/shared_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamics_crm/config/global_constants.dart';
-import 'package:dynamics_crm/models/document_type.dart';
+import 'package:dynamics_crm/models/activity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dynamics_crm/providers/data_provider.dart';
 import 'package:intl/intl.dart';
@@ -13,7 +13,7 @@ import '../../models/sales_order_line.dart';
 class ItemAddPortrait extends ConsumerStatefulWidget {
   const ItemAddPortrait({Key? key, required this.type, required this.selectedItem}) : super(key: key);
 
-  final DocumentType type;
+  final Activity type;
   final Item selectedItem;
 
   @override
@@ -54,13 +54,13 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
   @override
   Widget build(BuildContext context) {
 
-    if(widget.type == DocumentType.order) {
+    if(widget.type == Activity.order) {
       myOrders = ref.watch(salesOrderLines);
     }
-    else if(widget.type == DocumentType.draft) {
+    else if(widget.type == Activity.draft) {
       myOrders = ref.watch(salesOrderLinesDraft);
     }
-    else if(widget.type == DocumentType.copy) {
+    else if(widget.type == Activity.copy) {
       myOrders = ref.watch(salesOrderLinesCopy);
     }
 

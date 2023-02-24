@@ -17,7 +17,7 @@ import 'package:quickalert/models/quickalert_type.dart';
 import 'package:quickalert/widgets/quickalert_dialog.dart';
 
 import '../../models/customer.dart';
-import '../../models/document_type.dart';
+import '../../models/activity.dart';
 import '../../models/order.dart';
 import '../../models/sales_order.dart';
 import '../../models/sales_order_line.dart';
@@ -536,7 +536,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                               context,
                               MaterialPageRoute(
                                   builder: (context) =>
-                                      const ItemSelect(type: DocumentType.draft)));
+                                      const ItemSelect(type: Activity.draft)));
 
                           // globals.editingProductCart = null;
                           Order sum = totalSummary(salesOrder, myOrders);

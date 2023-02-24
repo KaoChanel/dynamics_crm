@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
+import 'package:dynamics_crm/models/google_autocomplete_place.dart';
 import 'package:http/http.dart' as http;
 import 'package:dynamics_crm/config/global_constants.dart';
 import 'package:dynamics_crm/models/company.dart';
@@ -8,7 +10,9 @@ import 'package:dynamics_crm/models/customer.dart';
 import 'package:dynamics_crm/models/employee.dart';
 import 'package:dynamics_crm/models/sales_order.dart';
 import 'package:dynamics_crm/models/sales_quote.dart';
+import 'package:uuid/uuid.dart';
 
+import '../models/google_place.dart';
 import '../models/task_event.dart';
 import '../models/employee_option.dart';
 
@@ -120,6 +124,65 @@ class ApiService {
   //     globals.customer_lng = null;
   //     return null;
   //   }
+  }
+
+  getFindPlace(String input, String sessionToken) async {
+    String type = '(regions)';
+    String baseURL = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json';
+    String request = '$baseURL?input=$input&key=$GOOGLE_MAP_API&sessiontoken=$sessionToken';
+
+    var response = await http.get(Uri.parse(request));
+
+    if (response.statusCode == 200) {
+      // log(json.decode(response.body)['predictions']);
+      return googleAutocompletePlaceFromJson(response.body);
+    } else {
+      throw Exception('Failed to load predictions');
+    }
+  }
+
+  getTextSearch(String query) async {
+    String type = '(regions)';
+    String baseURL = 'https://maps.googleapis.com/maps/api/place/textsearch/json';
+    String request = '$baseURL?query=$query&key=$GOOGLE_MAP_API';
+
+    var response = await http.get(Uri.parse(request));
+
+    if (response.statusCode == 200) {
+      // log(json.decode(response.body)['predictions']);
+      return googlePlaceFromJson(response.body);
+    } else {
+      throw Exception('Failed to search place');
+    }
+  }
+
+  getSuggestion(String input, String sessionToken) async {
+    String type = '(regions)';
+    String baseURL = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+    String request = '$baseURL?input=$input&key=$GOOGLE_MAP_API&sessiontoken=$sessionToken';
+
+    var response = await http.get(Uri.parse(request));
+
+    if (response.statusCode == 200) {
+      // log(json.decode(response.body)['predictions']);
+      return googleAutocompletePlaceFromJson(response.body);
+    } else {
+      throw Exception('Failed to load predictions');
+    }
+  }
+
+  // https://maps.googleapis.com/maps/api/place/details/json?place_id=ChIJrTLr-GyuEmsRBfy61i59si0&key=AIzaSyCgCn4EebVBR3d0dXLFBwlXa8I1_WXSQDI
+  getLocationByPlace(String placeId) async {
+    String baseURL = 'https://maps.googleapis.com/maps/api/place/details/json';
+    String request = '$baseURL?place_id=$placeId&key=$GOOGLE_MAP_API';
+
+    var response = await http.get(Uri.parse(request));
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body)['geometry']['location'];
+    } else {
+      throw Exception('Failed to load predictions');
+    }
   }
 
   Future<TaskEvent> createEmployeeOption(String emailAlertAppointment) async {

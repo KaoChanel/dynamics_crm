@@ -1,12 +1,17 @@
 import 'package:dynamics_crm/config/global_constants.dart';
 import 'package:dynamics_crm/models/district.dart';
 import 'package:dynamics_crm/models/district_sub.dart';
+import 'package:dynamics_crm/widgets/shared_widget.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart';
 
+import '../models/activity.dart';
 import '../models/business_type.dart';
 import '../models/province.dart';
 import '../models/billing_note.dart';
+import 'location_maps.dart';
 
 class CustomerCreate extends StatefulWidget {
   const CustomerCreate({Key? key}) : super(key: key);
@@ -55,6 +60,8 @@ class _CustomerCreateState extends State<CustomerCreate> {
   var txtFax = TextEditingController();
   var txtCompanyTel = TextEditingController();
   var txtCompanyEmail = TextEditingController();
+  LatLng companyLocation = DEFAULT_LOCATION;
+  late GoogleMapController mapController;
 
   /// Section 1 : Shipment Condition
 
@@ -78,8 +85,16 @@ class _CustomerCreateState extends State<CustomerCreate> {
   BusinessType? currentLivestockType;
   BusinessType? currentPet;
   BusinessType? currentBusinessType;
-  var txtOrderQuality = TextEditingController();
+  var txtOrderQty = TextEditingController();
   var txtCreditTerm = TextEditingController();
+
+  var txtQuantity = TextEditingController();
+  var txtBreederQty = TextEditingController();
+  var txtFishSpecies = TextEditingController();
+  var txtFishQty = TextEditingController();
+  var txtLivestockGroup = TextEditingController();
+  var txtLivestockType = TextEditingController();
+  var txtPetGroup = TextEditingController();
 
   @override
   void initState() {
@@ -96,15 +111,17 @@ class _CustomerCreateState extends State<CustomerCreate> {
 
   bindingController() {
     setState(() {
-      txtCustomerName.text = '.';
-      txtLastname.text = '.';
-      txtAddress1.text = '.';
-      txtIdentificationNumber.text = '.';
+      txtCustomerName.text = 'นายกันทรากร';
+      txtLastname.text = 'ใจวงค์';
+      txtAddress1.text = '56/217 The Connect ซอยวัดเวฬุวนาราม 9 ถนนสรงประภา ';
+      txtIdentificationNumber.text = '1570500212370';
       currentProvince = PROVINCES.first;
       currentDistrict = DISTRICTS.first;
       currentDistrictSub = DISTRICT_SUB.first;
       txtBirthDate.text = dateBirthDay != null ? DATE_FORMAT.format(dateBirthDay!) : '';
       txtZipCode.text = '${currentDistrictSub?.zipCode ?? ''}';
+
+      txtCompanyName.text = 'บริษัท แอมมิตี้ เทค จำกัด';
       txtBillingDate.text = 'ทุกวันที่ $cycleBillingDay เวลา $cycleBillingHour.${LEADING_ZERO.format(cycleBillingMinute)} น.';
       txtPaymentDate.text = 'ทุกวันที่ $cycleChequeDay เวลา $cycleChequeHour.${LEADING_ZERO.format(cycleChequeMinute)} น.';
     });
@@ -180,7 +197,7 @@ class _CustomerCreateState extends State<CustomerCreate> {
                                   return checkEmpty(value, 'ระบุวันเกิด');
                                 },
                                 onTap: () async {
-                                  dateBirthDay = await datePicker(context, dateBirthDay, maxYear: 0);
+                                  dateBirthDay = await SharedWidgets.datePicker(context, dateBirthDay, maxYear: 0);
                                   bindingController();
                                 },
                               ),
@@ -188,6 +205,7 @@ class _CustomerCreateState extends State<CustomerCreate> {
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8.0),
                               child: TextFormField(
+                                maxLength: 13,
                                 controller: txtIdentificationNumber,
                                 keyboardType: TextInputType.number,
                                 textInputAction: TextInputAction.next,
@@ -204,12 +222,14 @@ class _CustomerCreateState extends State<CustomerCreate> {
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8.0),
                               child: TextFormField(
+                                maxLength: 100,
+                                maxLines: 3,
                                 controller: txtAddress1,
                                 textInputAction: TextInputAction.next,
                                 decoration: const InputDecoration(
                                     labelText: 'ที่อยู่ตามบัตรประชาชน',
                                     border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                                    contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0)
                                 ),
                                 validator: (value) {
                                   return checkEmpty(value, 'ระบุที่อยู่ลูกค้า');
@@ -219,6 +239,8 @@ class _CustomerCreateState extends State<CustomerCreate> {
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8.0),
                               child: TextFormField(
+                                maxLength: 100,
+                                maxLines: 3,
                                 controller: txtAddress2,
                                 decoration: const InputDecoration(
                                     labelText: '',
@@ -361,6 +383,9 @@ class _CustomerCreateState extends State<CustomerCreate> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                                 child: TextFormField(
+                                  maxLength: 100,
+                                  maxLines: 3,
+                                  // minLines: 2,
                                   controller: txtCompanyAddress1,
                                   textInputAction: TextInputAction.next,
                                   decoration: const InputDecoration(
@@ -373,6 +398,7 @@ class _CustomerCreateState extends State<CustomerCreate> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                                 child: TextFormField(
+                                  maxLength: 13,
                                   controller: txtIdentificationNumber,
                                   keyboardType: TextInputType.number,
                                   textInputAction: TextInputAction.next,
@@ -491,6 +517,44 @@ class _CustomerCreateState extends State<CustomerCreate> {
                                   ),
                                 ),
                               ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                width: MediaQuery.of(context).size.width, // or use fixed size like 200
+                                height: MediaQuery.of(context).size.height / 2,
+                                child: GoogleMap(
+                                  initialCameraPosition: CameraPosition(target: companyLocation, zoom: 18),
+                                  markers: (companyLocation == null)
+                                      ? <Marker>{}
+                                      : {
+                                    Marker(
+                                      markerId: MarkerId('mark1'),
+                                      position: companyLocation ?? DEFAULT_LOCATION,
+                                    ),
+                                  },
+                                  onMapCreated: (GoogleMapController controller){
+                                    setState(() {
+                                      mapController = controller;
+                                    });
+                                  },
+                                  onTap: (LatLng tapLocation) async {
+                                    LatLng? res = await Navigator.push(context, MaterialPageRoute(builder: (context) => LocationMaps(location: companyLocation, activity: Activity.locationCollect)));
+
+                                    if(res != null) {
+                                      setState(() {
+                                        companyLocation = res;
+
+                                        // specified current users location
+                                        CameraPosition cameraPosition = CameraPosition(
+                                          target: LatLng(companyLocation.latitude, companyLocation.longitude),
+                                          zoom: 18,
+                                        );
+
+                                        mapController.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -600,7 +664,7 @@ class _CustomerCreateState extends State<CustomerCreate> {
                                       ),
                                       onTap: () async {
                                         // await datetimePicker(context, DateTime.now());
-                                        var res = await dayPicker(context, cycleBillingDay, cycleBillingHour, cycleBillingMinute);
+                                        var res = await SharedWidgets.dayPicker(context, cycleBillingDay, cycleBillingHour, cycleBillingMinute);
 
                                         if(res != null){
                                           cycleBillingDay = res.day;
@@ -652,7 +716,7 @@ class _CustomerCreateState extends State<CustomerCreate> {
                                         contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
                                     ),
                                     onTap: () async {
-                                      var res = await dayPicker(context, cycleChequeDay, cycleChequeHour, cycleChequeMinute);
+                                      var res = await SharedWidgets.dayPicker(context, cycleChequeDay, cycleChequeHour, cycleChequeMinute);
 
                                       if(res != null){
                                         cycleChequeDay = res.day;
@@ -678,12 +742,6 @@ class _CustomerCreateState extends State<CustomerCreate> {
                 title: StepState.indexed == 1 ? const Text('ผลิตภัณฑ์') : const Text('ผลิตภัณฑ์'),
                 content: Column(
                   children: <Widget>[
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: 'Home Address'),
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: 'Postcode'),
-                    ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: DropdownButtonFormField<BusinessType>(
@@ -704,6 +762,25 @@ class _CustomerCreateState extends State<CustomerCreate> {
                             currentLivestock = value!;
                           });
                         },
+                      ),
+                    ),
+                    Visibility(
+                      visible: currentLivestock?.displayName == 'อื่น ๆ',
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: TextFormField(
+                          controller: txtLivestockGroup,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                              labelText: 'ระบุกลุ่มปศุสัตว์',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                          ),
+                          validator: (value) {
+                            return checkEmpty(value, 'ระบุกลุ่มปศุสัตว์');
+                          },
+                        ),
                       ),
                     ),
                     Padding(
@@ -728,6 +805,101 @@ class _CustomerCreateState extends State<CustomerCreate> {
                         },
                       ),
                     ),
+                    Visibility(
+                      visible: currentLivestockType?.displayName == 'อื่น ๆ',
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: TextFormField(
+                          controller: txtLivestockGroup,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                              labelText: 'ระบุประเภทสัตว์',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                          ),
+                          validator: (value) {
+                            return checkEmpty(value, 'ระบุประเภทสัตว์');
+                          },
+                        ),
+                      ),
+                    ),
+                    Visibility(
+                      visible: currentLivestockType?.displayName == 'สุกร',
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: TextFormField(
+                          controller: txtBreederQty,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                              labelText: 'จำนวนแม่พันธุ์ (ตัว)',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                          ),
+                          validator: (value) {
+                            return checkEmpty(value, 'ระบุจำนวนแม่พันธุ์');
+                          },
+                        ),
+                      ),
+                    ),
+                    Visibility(
+                      visible: currentLivestockType != null && currentLivestockType?.displayName != 'ปลา',
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: TextFormField(
+                          controller: txtQuantity,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                              labelText: 'จำนวน (ตัว)',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                          ),
+                          validator: (value) {
+                            return checkEmpty(value, 'ระบุจำนวน');
+                          },
+                        ),
+                      ),
+                    ),
+                    Visibility(
+                      visible: currentLivestockType?.displayName == 'ปลา',
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: TextFormField(
+                          controller: txtFishSpecies,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                              labelText: 'ระบุพันธุ์ปลา',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                          ),
+                          validator: (value) {
+                            return checkEmpty(value, 'ระบุพันธุ์ปลา');
+                          },
+                        ),
+                      ),
+                    ),
+                    Visibility(
+                      visible: currentLivestockType?.displayName == 'ปลา',
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: TextFormField(
+                          controller: txtFishQty,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                              labelText: 'จำนวนปลา (กระชัง / บ่อ)',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                          ),
+                          validator: (value) {
+                            return checkEmpty(value, 'ระบุจำนวนปลา');
+                          },
+                        ),
+                      ),
+                    ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: DropdownButtonFormField<BusinessType>(
@@ -748,6 +920,25 @@ class _CustomerCreateState extends State<CustomerCreate> {
                             currentPet = value!;
                           });
                         },
+                      ),
+                    ),
+                    Visibility(
+                      visible: currentPet?.displayName == 'อื่น ๆ',
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: TextFormField(
+                          controller: txtLivestockGroup,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                              labelText: 'ระบุกลุ่มสัตว์เลี้ยง',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                          ),
+                          validator: (value) {
+                            return checkEmpty(value, 'ระบุกลุ่มสัตว์เลี้ยง');
+                          },
+                        ),
                       ),
                     ),
                     Padding(
@@ -772,6 +963,38 @@ class _CustomerCreateState extends State<CustomerCreate> {
                         },
                       ),
                     ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: TextFormField(
+                        controller: txtLivestockGroup,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                            labelText: 'ประมาณการใช้สินค้า / เดือน',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                        ),
+                        validator: (value) {
+                          return checkEmpty(value, 'ระบุการใช้สินค้า');
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: TextFormField(
+                        controller: txtLivestockGroup,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                            labelText: 'เครดิตการค้า (วัน)',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                        ),
+                        validator: (value) {
+                          return checkEmpty(value, 'ระบุเครดิตการค้า');
+                        },
+                      ),
+                    ),
                   ],
                 ),
                 isActive: _currentStep >= 1,
@@ -781,8 +1004,78 @@ class _CustomerCreateState extends State<CustomerCreate> {
                   title: StepState.indexed == 2 ? const Text('สรุป') : const Text('สรุป'),
                   content: Column(
                     children: <Widget>[
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Mobile Number'),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Card(
+                          child: ExpansionTile(
+                            title: const Text('ข้อมูลลูกค้า'),
+                            initiallyExpanded: true,
+                            childrenPadding: EdgeInsets.all(15.0),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text('${txtCustomerName.text} ${txtLastname.text}'),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text('${txtAddress1.text} ${txtAddress2.text}'),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: TextFormField(
+                                  controller: txtCompanyName,
+                                  decoration: const InputDecoration(
+                                      labelText: 'ชื่อบริษัท',
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: TextFormField(
+                                  controller: txtCompanyAddress1,
+                                  decoration: const InputDecoration(
+                                      labelText: 'สถานที่จัดส่งสินค้า',
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Card(
+                          child: ExpansionTile(
+                            title: const Text('ข้อมูลบริษัท'),
+                            initiallyExpanded: true,
+                            childrenPadding: EdgeInsets.all(15.0),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(txtCompanyName.text),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(txtCompanyAddress1.text),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: TextFormField(
+                                  controller: txtCompanyAddress1,
+                                  decoration: const InputDecoration(
+                                      labelText: 'สถานที่จัดส่งสินค้า',
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0)
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),

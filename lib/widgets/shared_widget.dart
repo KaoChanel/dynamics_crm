@@ -1,11 +1,16 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:badges/badges.dart';
 import 'package:dynamics_crm/models/sales_order.dart';
 import 'package:dynamics_crm/models/sales_order_line.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../config/global_constants.dart';
+import '../models/activity.dart';
 import '../models/item.dart';
+import '../ui/location_maps.dart';
 
 class SharedWidgets {
   // static Widget buildAppBar({String? title}) {
@@ -290,6 +295,196 @@ class SharedWidgets {
                 ])
             )
         );
+      },
+    );
+  }
+
+  static datePicker(BuildContext context, DateTime? initialDate, {int minYear = 1985, int maxYear = 5}) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate ?? DateTime.now(), // Refer step 1
+      firstDate: DateTime(minYear),
+      lastDate: DateTime(DateTime.now().year + maxYear, DateTime.now().month, DateTime.now().day),
+    );
+
+    if (picked != null && picked != initialDate) {
+      initialDate = picked;
+    }
+
+    return picked;
+  }
+
+  static datetimePicker(BuildContext context, DateTime? initialDate, {int minYear = 1985, int maxYear = 5}) async {
+    await DatePicker.showTimePicker(context,
+        showTitleActions: true,
+        locale: LocaleType.th,
+        // minTime: DateTime(minYear),
+        // maxTime: DateTime(maxYear),
+        currentTime: initialDate,
+        onChanged: (date) {
+          print('change $date');
+        },
+        onConfirm: (date) {
+          print('confirm $date');
+        });
+  }
+
+  static Future<DateTime?> dayPicker(BuildContext context, int cycleDay, int cycleHour, int cycleMinute) async {
+    int dayInMonth = 31;
+    int hour = 24;
+    DateTime cycle = DateTime(2020, 1, cycleDay, cycleHour, cycleMinute);
+
+    return await showCupertinoModalPopup(
+        context: context,
+        builder: (BuildContext context) => Container(
+          height: 220,
+          padding: const EdgeInsets.only(top: 5.0),
+          // The Bottom margin is provided to align the popup above the system navigation bar.
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          // Provide a background color for the popup.
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          // Use a SafeArea widget to avoid system overlaps.
+          child: Scaffold(
+            body: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // TextButton(
+                      //   onPressed: () {
+                      //     Navigator.pop(context);
+                      //   },
+                      //   child: Text('ยกเลิก', textAlign: TextAlign.left, style: TextStyle(color: Colors.grey),),
+                      // ),
+                      Container(),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context, cycle);
+                        },
+                        child: const Text('ตกลง', textAlign: TextAlign.right,),
+                      )
+                    ],
+                  ),
+                  Row(
+                    children: const [
+                      Expanded(child: Text('รอบวันที่', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))),
+                      Expanded(child: Text('ชั่วโมง', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))),
+                      Expanded(child: Text('นาที', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)))
+                    ],
+                  ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: CupertinoPicker(
+                            magnification: 1.22,
+                            squeeze: 1.2,
+                            useMagnifier: true,
+                            itemExtent: 32,
+                            scrollController: FixedExtentScrollController(initialItem: cycleDay - 1),
+                            // This is called when selected item is changed.
+                            onSelectedItemChanged: (int selectedItem) {
+                              cycleDay = selectedItem + 1;
+                              cycle = DateTime(2000, 1, cycleDay, cycleHour, cycleMinute);
+                            },
+                            children:
+                            List<Widget>.generate(dayInMonth, (int index) {
+                              return Center(
+                                child: Text(
+                                  '${index + 1}',
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                        Expanded(
+                          child: CupertinoPicker(
+                            magnification: 1.22,
+                            squeeze: 1.2,
+                            useMagnifier: true,
+                            itemExtent: 32,
+                            scrollController: FixedExtentScrollController(initialItem: cycleHour - 1),
+                            // This is called when selected item is changed.
+                            onSelectedItemChanged: (int selectedItem) {
+                              cycleHour = selectedItem + 1;
+                              cycle = DateTime(2000, 1, cycleDay, cycleHour, cycleMinute);
+                            },
+                            children:
+                            List<Widget>.generate(hour, (int index) {
+                              return Center(
+                                child: Text(
+                                  LEADING_ZERO.format(index + 1),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                        Expanded(
+                          child: CupertinoPicker(
+                            magnification: 1.22,
+                            squeeze: 1.2,
+                            useMagnifier: true,
+                            itemExtent: 32,
+                            scrollController: FixedExtentScrollController(initialItem: (cycleMinute / 5).round()),
+                            // This is called when selected item is changed.
+                            onSelectedItemChanged: (int selectedItem) {
+                              cycleMinute = selectedItem * 5;
+                              cycle = DateTime(2000, 1, cycleDay, cycleHour, cycleMinute);
+                            },
+                            children:
+                            List<Widget>.generate(12, (int index) {
+                              return Center(
+                                child: Text(
+                                  LEADING_ZERO.format((index) * 5),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        )
+    );
+  }
+
+  static miniMap(BuildContext context, LatLng myLocation) {
+    late GoogleMapController mapController;
+    Marker myMarkers = Marker(
+        markerId: const MarkerId('mark1'),
+        position: LatLng(myLocation.latitude, myLocation.longitude),
+        infoWindow: const InfoWindow(title: 'ตำแหน่งของฉัน', snippet: 'BIS Group Office')
+    );
+
+    void _onMapCreated(GoogleMapController controller) {
+      mapController = controller;
+    }
+
+    return GoogleMap(
+      initialCameraPosition: CameraPosition(target: myLocation, zoom: 18),
+      markers: (myLocation == null)
+          ? <Marker>{}
+          : {
+        Marker(
+          markerId: MarkerId('mark1'),
+          position: myLocation ?? DEFAULT_LOCATION,
+        ),
+      },
+      onMapCreated: _onMapCreated,
+      onTap: (LatLng tapLocation) async {
+        LatLng? res = await Navigator.push(context, MaterialPageRoute(builder: (context) => LocationMaps(location: myLocation, activity: Activity.locationCollect,)));
+
+        if(res != null) {
+          myLocation = res;
+        }
       },
     );
   }

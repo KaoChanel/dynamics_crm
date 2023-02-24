@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:dynamics_crm/models/business_type.dart';
 import 'package:dynamics_crm/models/customer.dart';
 import 'package:dynamics_crm/models/customer_financial_detail.dart';
@@ -14,10 +17,9 @@ import 'package:dynamics_crm/models/sales_order.dart';
 import 'package:dynamics_crm/models/sales_shipment.dart';
 import 'package:dynamics_crm/models/system_option.dart';
 import 'package:dynamics_crm/models/tax_group.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:location/location.dart';
 
@@ -34,6 +36,7 @@ import '../models/order.dart';
 import '../models/sales_order_line.dart';
 import '../models/unit.dart';
 import '../models/zipcode.dart';
+import '../ui/location_maps.dart';
 
 const String APP_NAME = 'SmartSales BIS';
 
@@ -46,7 +49,9 @@ Company MY_COMPANY = Company(
 String SERVER_ERP_URL =
     'https://smartsalesbis.com/api/v2.0/companies(${MY_COMPANY.id})/';
 String SERVER_BIS_URL = 'https://smartsalesbis.com/api/${MY_COMPANY.id}/';
+String GOOGLE_MAP_API = 'AIzaSyCgCn4EebVBR3d0dXLFBwlXa8I1_WXSQDI';
 String FCM_TOKEN = '';
+LatLng DEFAULT_LOCATION = const LatLng(13.9271307, 100.5330154);
 
 late List<Item> ITEMS = [
   Item(
@@ -546,165 +551,6 @@ bool checkLowerPrice() {
   return false;
 }
 
-datePicker(BuildContext context, DateTime? initialDate, {int minYear = 1985, int maxYear = 5}) async {
-  final DateTime? picked = await showDatePicker(
-    context: context,
-    initialDate: initialDate ?? DateTime.now(), // Refer step 1
-    firstDate: DateTime(minYear),
-    lastDate: DateTime(DateTime.now().year + maxYear, DateTime.now().month, DateTime.now().day),
-  );
-
-  if (picked != null && picked != initialDate) {
-    initialDate = picked;
-  }
-
-  return picked;
-}
-
-datetimePicker(BuildContext context, DateTime? initialDate, {int minYear = 1985, int maxYear = 5}) async {
-  await DatePicker.showTimePicker(context,
-      showTitleActions: true,
-      locale: LocaleType.th,
-      // minTime: DateTime(minYear),
-      // maxTime: DateTime(maxYear),
-      currentTime: initialDate,
-      onChanged: (date) {
-        print('change $date');
-      },
-      onConfirm: (date) {
-        print('confirm $date');
-      });
-}
-
-Future<DateTime?> dayPicker(BuildContext context, int cycleDay, int cycleHour, int cycleMinute) async {
-  int dayInMonth = 31;
-  int hour = 24;
-  DateTime cycle = DateTime(2020, 1, cycleDay, cycleHour, cycleMinute);
-
-  return await showCupertinoModalPopup(
-      context: context,
-      builder: (BuildContext context) => Container(
-        height: 220,
-        padding: const EdgeInsets.only(top: 5.0),
-        // The Bottom margin is provided to align the popup above the system navigation bar.
-        margin: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        // Provide a background color for the popup.
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        // Use a SafeArea widget to avoid system overlaps.
-        child: Scaffold(
-          body: SafeArea(
-            top: false,
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // TextButton(
-                    //   onPressed: () {
-                    //     Navigator.pop(context);
-                    //   },
-                    //   child: Text('ยกเลิก', textAlign: TextAlign.left, style: TextStyle(color: Colors.grey),),
-                    // ),
-                    Container(),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context, cycle);
-                      },
-                      child: const Text('ตกลง', textAlign: TextAlign.right,),
-                    )
-                  ],
-                ),
-                Row(
-                  children: const [
-                    Expanded(child: Text('รอบวันที่', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))),
-                    Expanded(child: Text('ชั่วโมง', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))),
-                    Expanded(child: Text('นาที', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)))
-                  ],
-                ),
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: CupertinoPicker(
-                          magnification: 1.22,
-                          squeeze: 1.2,
-                          useMagnifier: true,
-                          itemExtent: 32,
-                          scrollController: FixedExtentScrollController(initialItem: cycleDay - 1),
-                          // This is called when selected item is changed.
-                          onSelectedItemChanged: (int selectedItem) {
-                            cycleDay = selectedItem + 1;
-                            cycle = DateTime(2000, 1, cycleDay, cycleHour, cycleMinute);
-                          },
-                          children:
-                          List<Widget>.generate(dayInMonth, (int index) {
-                            return Center(
-                              child: Text(
-                                '${index + 1}',
-                              ),
-                            );
-                          }),
-                        ),
-                      ),
-                      Expanded(
-                        child: CupertinoPicker(
-                          magnification: 1.22,
-                          squeeze: 1.2,
-                          useMagnifier: true,
-                          itemExtent: 32,
-                          scrollController: FixedExtentScrollController(initialItem: cycleHour - 1),
-                          // This is called when selected item is changed.
-                          onSelectedItemChanged: (int selectedItem) {
-                            cycleHour = selectedItem + 1;
-                            cycle = DateTime(2000, 1, cycleDay, cycleHour, cycleMinute);
-                          },
-                          children:
-                          List<Widget>.generate(hour, (int index) {
-                            return Center(
-                              child: Text(
-                                LEADING_ZERO.format(index + 1),
-                              ),
-                            );
-                          }),
-                        ),
-                      ),
-                      Expanded(
-                        child: CupertinoPicker(
-                          magnification: 1.22,
-                          squeeze: 1.2,
-                          useMagnifier: true,
-                          itemExtent: 32,
-                          scrollController: FixedExtentScrollController(initialItem: (cycleMinute / 5).round()),
-                          // This is called when selected item is changed.
-                          onSelectedItemChanged: (int selectedItem) {
-                            cycleMinute = selectedItem * 5;
-                            cycle = DateTime(2000, 1, cycleDay, cycleHour, cycleMinute);
-                          },
-                          children:
-                          List<Widget>.generate(12, (int index) {
-                            return Center(
-                              child: Text(
-                                LEADING_ZERO.format((index) * 5),
-                              ),
-                            );
-                          }),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      )
-  );
-
-  return null;
-}
-
 changeCustomer(Customer customer) {
   CUSTOMER = customer;
 
@@ -866,4 +712,39 @@ double vatInclude(double summary, double vatBase) {
 double vatExclude(double summary, double vatBase) {
   double vatTotal = vatBase * 0.07;
   return vatBase + vatTotal;
+}
+
+checkIn() {
+
+}
+
+// created method for getting user current location
+Future<Position> getMyLocation() async {
+
+  await Geolocator.requestPermission().then((value){
+  }).onError((error, stackTrace) async {
+    await Geolocator.requestPermission();
+    print("ERROR"+error.toString());
+  });
+
+  return await Geolocator.getCurrentPosition();
+}
+
+changeLocationMarker(LatLng location) {
+  // marker added for current users location.
+  var markers = <Marker>{};
+  markers.add(
+      Marker(
+        markerId: const MarkerId("01"),
+        position: location,
+        infoWindow: const InfoWindow(title: 'ตำแหน่งของฉัน',),
+      )
+  );
+
+  return markers;
+}
+
+changeCameraPosition(LatLng location) {
+  // specified current users location
+  return CameraPosition(zoom: 20, target: location);
 }

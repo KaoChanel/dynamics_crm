@@ -17,7 +17,7 @@ import 'package:collection/collection.dart';
 import 'package:quickalert/models/quickalert_type.dart';
 import 'package:quickalert/widgets/quickalert_dialog.dart';
 
-import '../../models/document_type.dart';
+import '../../models/activity.dart';
 import '../../models/item.dart';
 import '../../models/sales_order.dart';
 import '../../models/task_event.dart';
@@ -581,7 +581,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                             context,
                             MaterialPageRoute(
                                 builder: (context) =>
-                                    const ItemSelect(type: DocumentType.order)
+                                    const ItemSelect(type: Activity.order)
                             )
                         );
 
