@@ -4,6 +4,8 @@
 
 import 'dart:convert';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 Customer customerFromJson(String str) => Customer.fromJson(json.decode(str));
 
 List<Customer> customerListFromJson(String str) => List<Customer>.from(json.decode(str).map((x) => Customer.fromJson(x)));
@@ -37,6 +39,7 @@ class Customer {
     this.paymentTermsId,
     this.shipmentMethodId,
     this.paymentMethodId,
+    this.creditBalance = 0,
     this.blocked = 'All',
     this.lastModifiedDateTime,
   });
@@ -66,7 +69,8 @@ class Customer {
   String? paymentTermsId;
   String? shipmentMethodId;
   String? paymentMethodId;
-  String blocked = 'All';                   /// Specifies the type of customer, can be "Ship", "Invoice" or "All".
+  double? creditBalance;
+  String blocked;                   /// Specifies the type of customer, can be "Ship", "Invoice" or "All".
   DateTime? lastModifiedDateTime;
 
   Customer copyWith({
@@ -187,4 +191,20 @@ class Customer {
     "blocked": blocked == null ? null : blocked,
     "lastModifiedDateTime": lastModifiedDateTime == null ? null : lastModifiedDateTime!.toIso8601String(),
   };
+}
+
+class CustomerNotifier extends StateNotifier<Customer> {
+  CustomerNotifier(): super(Customer());
+
+  Customer get() {
+    return state;
+  }
+
+  void edit(Customer item) {
+    state = item;
+  }
+
+  void remove(Customer item) {
+    state = Customer();
+  }
 }

@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
+import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dynamics_crm/models/google_autocomplete_place.dart';
+import 'package:dynamics_crm/models/unit.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:dynamics_crm/config/global_constants.dart';
 import 'package:dynamics_crm/models/company.dart';
 import 'package:dynamics_crm/models/customer.dart';
@@ -12,38 +17,103 @@ import 'package:dynamics_crm/models/sales_order.dart';
 import 'package:dynamics_crm/models/sales_quote.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/blog.dart';
 import '../models/google_place.dart';
+import '../models/item.dart';
+import '../models/remark.dart';
+import '../models/sales_order_line.dart';
 import '../models/task_event.dart';
 import '../models/employee_option.dart';
 
 class ApiService {
+  final dio = Dio();
   final httpClient = http.Client();
-  final String? accessToken;
+  final authorization = 'Basic';
+  final username = 'nwth';
+  final password = 'q7DmBHRJSRuUwFKC62X0JpID8wSwKnY+LdY0qA+enfI=';
+  late String? accessToken;
 
-  ApiService({
-    this.accessToken,
-  }) : assert(accessToken != null);
+  ConnectivityResult _connectionStatus = ConnectivityResult.none;
+  final Connectivity _connectivity = Connectivity();
+  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
 
-  Future<Company> getCompany() async {
-    final uri = Uri.parse(COMPANY_API);
-    final response = await httpClient.get(uri, headers: {
-      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
-    });
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load company');
-    }
-    return companyFromJson(json.decode(response.body));
+  // ApiService({
+  //   this.accessToken,
+  // }) : assert(accessToken != null);
+
+  ApiService(){
+    final bytes = utf8.encode('$username:$password');
+    final base64Str = base64.encode(bytes);
+
+    dio.options.headers['content-Type'] = 'application/json';
+    dio.options.headers["authorization"] = "$authorization $base64Str";
   }
 
-  Future<Employee> getEmployee(String username) async {
-    final uri = Uri.parse(EMPLOYEE_API);
-    final response = await httpClient.get(uri, headers: {
-      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
-    });
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load employee');
+  // Platform messages are asynchronous, so we initialize in an async method.
+  Future<void> initConnectivity() async {
+    late ConnectivityResult result;
+    // Platform messages may fail, so we use a try/catch PlatformException.
+    try {
+      result = await _connectivity.checkConnectivity();
+    } on PlatformException catch (e) {
+      developer.log('Couldn\'t check connectivity status', error: e);
+      return;
     }
-    return employeeFromJson(json.decode(response.body));
+
+    // If the widget was removed from the tree while the asynchronous platform
+    // message was in flight, we want to discard the reply rather than calling
+    // setState to update our non-existent appearance.
+
+    // if (!mounted) {
+    //   return Future.value(null);
+    // }
+
+    return _updateConnectionStatus(result);
+  }
+
+  Future<void> _updateConnectionStatus(ConnectivityResult result) async {
+    _connectionStatus = result;
+  }
+
+  Future<List<Company>> getCompanies() async {
+    try {
+      // final uri = Uri.parse('http://app05.naviworldth.com:19028/BIS_Live/api/nwth/bis/v2.0/companies');
+      // final response = await httpClient.get(uri, headers: {
+      //   HttpHeaders.authorizationHeader: '$authorization $base64Str',
+      // });
+
+      final response = await dio.get(COMPANIES_API);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load company ${response.data}');
+      }
+
+      return companyListFromJson(json.encode(response.data['value']));
+    }catch(error){
+      developer.log(error.toString());
+      throw Exception(error.toString());
+    }
+  }
+
+  Future<Company> getCompany(String id) async {
+    final response = await dio.get('$COMPANIES_API($id)');
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load company ${response.data}');
+    }
+    return companyFromJson(json.encode(response.data));
+  }
+
+  Future<Employee> getEmployee(String username, String password) async {
+    String url = "$EMPLOYEE_API?\$filter=code eq '$username' and password eq '$password'";
+
+    final response = await dio.get(url);
+    if (response.statusCode != 200) {
+      // throw Exception('Failed to load employee');
+      return Employee();
+    }
+
+    return employeeListFromJson(json.encode(response.data['value'])).first;
   }
 
   Future<Customer> getCustomer() async {
@@ -70,17 +140,96 @@ class ApiService {
     return customerListFromJson(json.decode(response.body));
   }
 
-  Future<List<SalesOrder>> getMyOrders(String employeeId) async {
-    final uri = Uri.parse(CUSTOMER_API);
-    final response = await httpClient.get(uri, headers: {
-      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
-    });
+  Future<List<Item>> getItems() async {
+    try {
+      final response = await dio.get(ITEMS_API);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load items ${response.data}');
+      }
+
+      return itemListFromJson(json.encode(response.data['value']));
+    }catch(error){
+      developer.log(error.toString());
+      throw Exception(error.toString());
+    }
+  }
+
+  Future<List<Unit>> getUnits() async {
+    try {
+      final response = await dio.get(UNITS_API);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load units ${response.data}');
+      }
+
+      return unitListFromJson(json.encode(response.data['value']));
+    }catch(error){
+      // developer.log(error.toString());
+      throw Exception(error.toString());
+    }
+  }
+
+  Future<List<Remark>> getRemark() async {
+    try{
+      String? company = companies.firstWhere((e) => MY_COMPANY.displayName!.toLowerCase().contains(e.displayName!.toLowerCase()), orElse: () => Company()).name ?? '';
+      final response = await dio.get('${REMARK_API}$company');
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load remarks ${response.data}');
+      }
+
+      return remarkFromJson(json.encode(response.data));
+    }catch(error){
+      throw Exception(error.toString());
+    }
+  }
+
+  Future<List<Blog>> getNews() async {
+    try{
+      String? company = companies.firstWhere((e) => MY_COMPANY.displayName!.toLowerCase().contains(e.displayName!.toLowerCase()), orElse: () => Company()).name ?? '';
+      final response = await dio.get('${NEWS_API}');
+
+      if (response.statusCode != 200) {
+        // throw Exception('Failed to load news ${response.data}');
+
+        return <Blog>[];
+      }
+
+      return blogListFromJson(json.encode(response.data));
+    }catch(error){
+      // throw Exception(error.toString());
+      return <Blog>[];
+    }
+  }
+
+  Future<List<SalesQuote>> getMyQuotes([String salesPersonCode = '']) async {
+    final response = await dio.get("$ORDERS_API?\$filter=salespersonCode eq '$salesPersonCode'");
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load my quotes.');
+    }
+
+    return salesQuoteListFromJson(json.encode(response.data['value']));
+  }
+
+  Future<List<SalesOrder>> getMyOrders([String salesPersonCode = '']) async {
+    // var uri = Uri.parse(ORDERS_API);
+    // if(salesPersonCode.isNotEmpty){
+    //   uri = Uri.parse("$ORDERS_API?\$filter=salespersonCode eq '$salesPersonCode'");
+    // }
+
+    final response = await dio.get("$ORDERS_API?\$filter=salespersonCode eq '$salesPersonCode'");
+
+    // final response = await httpClient.get(uri, headers: {
+    //   HttpHeaders.authorizationHeader: 'Bearer $accessToken',
+    // });
 
     if (response.statusCode != 200) {
       throw Exception('Failed to load my orders.');
     }
 
-    return salesOrderListFromJson(json.decode(response.body));
+    return salesOrderListFromJson(json.encode(response.data['value']));
   }
 
   Future<EmployeeOption?> getEmployeeOption() async {
@@ -190,7 +339,7 @@ class ApiService {
       EmployeeOption? employeeOption = EmployeeOption()
         ..empId = EMPLOYEE?.id
       // tbmEmployeeOption.empCode = EMPLOYEE.code;
-        ..empName = EMPLOYEE?.displayName
+        ..empName = EMPLOYEE?.name
         ..emailAlertAppointment = emailAlertAppointment
         ..createDate = DateTime.now()
         ..createBy = EMPLOYEE?.id
@@ -237,8 +386,8 @@ class ApiService {
       var tbmEmployeeOption = EmployeeOption()
         ..rowId = EMPLOYEE_OPTION?.rowId
         ..empId = EMPLOYEE?.id
-        // ..empCode = EMPLOYEE.empCode
-        ..empName = EMPLOYEE?.displayName
+        ..empCode = EMPLOYEE?.code
+        ..empName = EMPLOYEE?.name
         ..emailAlertAppointment = emailAlertAppointment
         ..createDate = EMPLOYEE_OPTION?.createDate
         ..createBy = EMPLOYEE_OPTION?.createBy
@@ -308,6 +457,36 @@ class ApiService {
     return salesQuoteFromJson(response.body);
   }
 
+  Future<SalesOrder> getSalesOrder(SalesOrder obj) async {
+    final uri = Uri.parse(ORDERS_API);
+    final response = await httpClient.post(uri, headers: {
+      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    }, body: json.encode(obj));
+
+    if (response.statusCode != 201) {
+      throw Exception('Failed to create sales order');
+    }
+
+    return salesOrderFromJson(response.body);
+  }
+
+  Future<List<SalesOrderLine>> getSalesOrderLine(String id) async {
+    // final uri = Uri.parse(ORDERS_API);
+    // final response = await httpClient.get(uri, headers: {
+    //   HttpHeaders.authorizationHeader: 'Bearer $accessToken',
+    //   HttpHeaders.contentTypeHeader: 'application/json'
+    // });
+
+    // if (response.statusCode != 201) {
+    //   throw Exception('Failed to get sales order lines');
+    // }
+
+    // return salesOrderLineListFromJson(response.body);
+
+    return SALES_ORDER_LINES.where((e) => e.documentId == id).toList();
+  }
+
   Future<SalesOrder> createSalesOrder(SalesOrder obj) async {
     final uri = Uri.parse(ORDERS_API);
     final response = await httpClient.post(uri, headers: {
@@ -351,7 +530,7 @@ class ApiService {
   }
 
   Future<SalesOrder> updateSalesOrder(SalesOrder obj) async {
-    final uri = Uri.parse("$ORDERS_API(${obj.id})");
+    final uri = Uri.parse(ORDERS_API);
     final response = await httpClient.put(uri, headers: {
       HttpHeaders.authorizationHeader: 'Bearer $accessToken',
       HttpHeaders.contentTypeHeader: 'application/json'

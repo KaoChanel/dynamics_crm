@@ -30,15 +30,20 @@ class SalesQuote {
     this.shipmentMethodId,
     this.shipmentMethod,
     this.salesperson,
+    this.discountType,
+    this.discount,
     this.discountAmount,
     this.totalAmountExcludingTax,
     this.totalTaxAmount,
     this.totalAmountIncludingTax,
+    this.netAmount,
     this.status,
+    this.bisStatus,
     this.sentDate,
     this.validUntilDate,
     this.acceptedDate,
     this.lastModifiedDateTime,
+    this.remark = '',
   });
 
   String? id;
@@ -57,15 +62,20 @@ class SalesQuote {
   String? shipmentMethodId;
   String? shipmentMethod;
   String? salesperson;
-  int? discountAmount;
+  String? discountType;
+  double? discount;
+  double? discountAmount;
   double? totalAmountExcludingTax;
   double? totalTaxAmount;
   double? totalAmountIncludingTax;
+  double? netAmount;
   String? status;
+  String? bisStatus;
   DateTime? sentDate;
   DateTime? validUntilDate;
   DateTime? acceptedDate;
   DateTime? lastModifiedDateTime;
+  String remark;
 
   SalesQuote copyWith({
     String? id,
@@ -84,15 +94,19 @@ class SalesQuote {
     String? shipmentMethodId,
     String? shipmentMethod,
     String? salesperson,
-    int? discountAmount,
+    String? discountType,
+    double? discount,
+    double? discountAmount,
     double? totalAmountExcludingTax,
     double? totalTaxAmount,
     double? totalAmountIncludingTax,
+    double? netAmount,
     String? status,
     DateTime? sentDate,
     DateTime? validUntilDate,
     DateTime? acceptedDate,
     DateTime? lastModifiedDateTime,
+    String remark = '',
   }) =>
       SalesQuote(
         id: id ?? this.id,
@@ -111,15 +125,18 @@ class SalesQuote {
         shipmentMethodId: shipmentMethodId ?? this.shipmentMethodId,
         shipmentMethod: shipmentMethod ?? this.shipmentMethod,
         salesperson: salesperson ?? this.salesperson,
+        discount: discount ?? this.discount,
         discountAmount: discountAmount ?? this.discountAmount,
         totalAmountExcludingTax: totalAmountExcludingTax ?? this.totalAmountExcludingTax,
         totalTaxAmount: totalTaxAmount ?? this.totalTaxAmount,
         totalAmountIncludingTax: totalAmountIncludingTax ?? this.totalAmountIncludingTax,
+        netAmount: netAmount ?? this.netAmount,
         status: status ?? this.status,
         sentDate: sentDate ?? this.sentDate,
         validUntilDate: validUntilDate ?? this.validUntilDate,
         acceptedDate: acceptedDate ?? this.acceptedDate,
         lastModifiedDateTime: lastModifiedDateTime ?? this.lastModifiedDateTime,
+        remark: remark
       );
 
   factory SalesQuote.fromJson(Map<String, dynamic> json) => SalesQuote(
@@ -144,6 +161,7 @@ class SalesQuote {
     totalTaxAmount: json["totalTaxAmount"] == null ? null : json["totalTaxAmount"].toDouble(),
     totalAmountIncludingTax: json["totalAmountIncludingTax"] == null ? null : json["totalAmountIncludingTax"].toDouble(),
     status: json["status"] == null ? null : json["status"],
+    bisStatus: json["bisStatus"] == null ? null : json["bisStatus"],
     sentDate: json["sentDate"] == null ? null : DateTime.parse(json["sentDate"]),
     validUntilDate: json["validUntilDate"] == null ? null : DateTime.parse(json["validUntilDate"]),
     acceptedDate: json["acceptedDate"] == null ? null : DateTime.parse(json["acceptedDate"]),
@@ -172,6 +190,7 @@ class SalesQuote {
     "totalTaxAmount": totalTaxAmount == null ? null : totalTaxAmount,
     "totalAmountIncludingTax": totalAmountIncludingTax == null ? null : totalAmountIncludingTax,
     "status": status == null ? null : status,
+    "bisStatus": bisStatus == null ? null : bisStatus,
     "sentDate": sentDate == null ? null : sentDate!.toIso8601String(),
     "validUntilDate": validUntilDate == null ? null : "${validUntilDate!.year.toString().padLeft(4, '0')}-${validUntilDate!.month.toString().padLeft(2, '0')}-${validUntilDate!.day.toString().padLeft(2, '0')}",
     "acceptedDate": acceptedDate == null ? null : "${acceptedDate!.year.toString().padLeft(4, '0')}-${acceptedDate!.month.toString().padLeft(2, '0')}-${acceptedDate!.day.toString().padLeft(2, '0')}",
@@ -226,28 +245,22 @@ class BillingPostalAddress {
   };
 }
 
-class SalesQuoteNotifier extends StateNotifier<List<SalesQuote>> {
-  SalesQuoteNotifier(super.state);
+class SalesQuoteNotifier extends StateNotifier<SalesQuote> {
+  SalesQuoteNotifier() : super(SalesQuote());
 
-  List<SalesQuote> get() {
+  SalesQuote get() {
     return state;
   }
 
-  void add(SalesQuote item) {
-    state = [...state, item];
-  }
+  // void add(SalesQuote item) {
+  //   state = [...state, item];
+  // }
 
   void edit(SalesQuote item) {
-    state = [
-      for(var row in state)
-        if(row.id == item.id)
-          row = item
-        else
-          row
-    ];
+    state = item;
   }
 
-  void remove(SalesQuote item) {
-    state.removeWhere((e) => e.id == item.id);
-  }
+  // void remove(SalesQuote item) {
+  //   state.removeWhere((e) => e.id == item.id);
+  // }
 }

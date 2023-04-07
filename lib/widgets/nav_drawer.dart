@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
+import '../models/customer.dart';
 import '../ui/login.dart';
 import '../ui/setting.dart';
 import '../ui/sales_order_create.dart';
@@ -13,11 +14,13 @@ class NavDrawer extends StatelessWidget {
 
   Future<void> logout() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.remove('access');
+    prefs.remove('username');
     prefs.remove('password');
     prefs.remove('company');
     prefs.remove('customer');
-    prefs.remove('lockPrice');
-    prefs.remove('check_due_date');
+    // prefs.remove('lockPrice');
+    // prefs.remove('check_due_date');
   }
 
   @override
@@ -34,7 +37,7 @@ class NavDrawer extends StatelessWidget {
               children: <Widget>[
                 DrawerHeader(
                   child: Text(
-                    'SmartSales BIS \nVersion 3.3.4',
+                    'SmartSales BIS \nversion 1.0.0',
                     style: TextStyle(color: Colors.white, fontSize: 25),
                   ),
                   decoration: BoxDecoration(
@@ -157,11 +160,11 @@ class NavDrawer extends StatelessWidget {
                   ),
                 ),
                 child: ListTile(
-                  leading: Icon(Icons.exit_to_app),
-                  title: Text('Logout'),
+                  leading: const Icon(Icons.exit_to_app),
+                  title: const Text('Logout'),
                   onTap: () async {
                     // globals.docKeyword = null;
-                    CUSTOMER = null;
+                    CUSTOMER = Customer();
                     // globals.allCustomer = null;
                     // globals.allCustomerNew = null;
                     // globals.allCustomerByEmp = null;

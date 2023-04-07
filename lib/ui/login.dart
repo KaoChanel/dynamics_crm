@@ -1,5 +1,8 @@
+import 'dart:developer';
 import 'dart:io';
 
+import 'package:dynamics_crm/models/employee.dart';
+import 'package:dynamics_crm/services/api_service.dart';
 import 'package:dynamics_crm/widgets/shared_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/global_constants.dart';
 import '../models/company.dart';
 import '../widgets/customer_clipper.dart';
+import 'launcher.dart';
 
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
@@ -17,10 +21,33 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  late Company? compValue;
+  Company? compValue;
   bool isPassword = true;
+  List<Company> companies = [];
   TextEditingController txtUsername = TextEditingController();
   TextEditingController txtPassword = TextEditingController();
+
+  getCompany() async {
+    try {
+      companies = await ApiService().getCompanies();
+
+      setState(() {
+
+      });
+    }catch(error) {
+      log(error.toString());
+    }
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await getCompany();
+    });
+  }
 
   @override
   void dispose() {
@@ -40,57 +67,53 @@ class _LoginState extends State<Login> {
         .size
         .width;
     return Scaffold(
-        body: Container(
-          // height: height,
-          // width: width,
-          child: SingleChildScrollView(
-            child: Stack(
-              children: <Widget>[
-                Positioned(
-                    top: -height * .16,
-                    // right: -MediaQuery
-                    //     .of(context)
-                    //     .size
-                    //     .width * .4,
-                    child: bezierContainer()
+        body: SingleChildScrollView(
+          child: Stack(
+            children: <Widget>[
+              Positioned(
+                  top: -height * .11,
+                  // right: -MediaQuery
+                  //     .of(context)
+                  //     .size
+                  //     .width * .4,
+                  child: bezierContainer()
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    // SizedBox(height: height * .1),
+                    _title(),
+                    // Text('For Tester', style: TextStyle(fontSize: 22.0, color: Colors.white, fontWeight: FontWeight.bold),),
+                    const SizedBox(height: 20),
+                    _emailPasswordWidget(),
+                    const SizedBox(height: 20),
+                    _companySelect(),
+                    const SizedBox(height: 45),
+                    _submitButton(),
+                    // Container(
+                    //   width: MediaQuery
+                    //       .of(context)
+                    //       .size
+                    //       .width / 2,
+                    //   padding: EdgeInsets.symmetric(vertical: 10),
+                    //   alignment: Alignment.centerRight,
+                    //   child: Text('Forgot Password ?',
+                    //       style: TextStyle(
+                    //           fontSize: 14, fontWeight: FontWeight.w500)),
+                    // ),
+                    // _divider(),
+                    //_facebookButton(),
+                    SizedBox(height: height * .035),
+                    _createAccountLabel(),
+                  ],
                 ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      // SizedBox(height: height * .1),
-                      _title(),
-                      // Text('For Tester', style: TextStyle(fontSize: 22.0, color: Colors.white, fontWeight: FontWeight.bold),),
-                      SizedBox(height: 20),
-                      _emailPasswordWidget(),
-                      SizedBox(height: 20),
-                      _companySelect(),
-                      SizedBox(height: 20),
-                      _submitButton(),
-                      // Container(
-                      //   width: MediaQuery
-                      //       .of(context)
-                      //       .size
-                      //       .width / 2,
-                      //   padding: EdgeInsets.symmetric(vertical: 10),
-                      //   alignment: Alignment.centerRight,
-                      //   child: Text('Forgot Password ?',
-                      //       style: TextStyle(
-                      //           fontSize: 14, fontWeight: FontWeight.w500)),
-                      // ),
-                      // _divider(),
-                      //_facebookButton(),
-                      SizedBox(height: height * .055),
-                      _createAccountLabel(),
-                    ],
-                  ),
-                ),
-                // Positioned(top: 40, left: 0, child: _backButton()),
-              ],
-            ),
+              ),
+              // Positioned(top: 40, left: 0, child: _backButton()),
+            ],
           ),
         )
     );
@@ -112,7 +135,7 @@ class _LoginState extends State<Login> {
   //         if(globals.employee.empHead == null) globals.employee.empHead = globals.employee.empId;
   //         globals.company = company;
   //
-  //         if(globals.employee.isLock == 'Y'){
+  //         if(globals.employee.isLock == 'Y') {
   //           return showAlertDialog(context, 'คุณไม่มีสิทธิเข้าใช้งานแล้ว');
   //         }
   //
@@ -227,15 +250,30 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Widget _submitButton() {
+  _submitButton() {
     return InkWell(
       onTap: () async {
-        if(compValue?.id == null || txtUsername.text == '' || txtPassword.text == '') {
-          return SharedWidgets.showAlert(context, 'แจ้งเตือน', 'โปรดกรอกข้อมูล');
-        }
+        // if(compValue?.id == null || txtUsername.text == '' || txtPassword.text == '') {
+        //   return SharedWidgets.showAlert(context, 'แจ้งเตือน', 'โปรดกรอกข้อมูล');
+        // }
 
         // await getUser(compValue.compCode, txtUsername.text, txtPassword.text);
         // Navigator.pop(context);
+
+        Employee emp = await ApiService().getEmployee(txtUsername.text, txtPassword.text);
+
+        if(emp != Employee()){
+          EMPLOYEE = emp;
+          MY_COMPANY = compValue!;
+
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          prefs.setBool('access', true);
+          prefs.setString('username', EMPLOYEE.code ?? '');
+          prefs.setString('password', EMPLOYEE.password ?? '');
+          prefs.setString('company', MY_COMPANY.id!);
+
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Launcher(pageIndex: 3)));
+        }
 
         if (kDebugMode) {
           print("Username: ${txtUsername.text} Password: ${txtPassword.text}");
@@ -245,11 +283,11 @@ class _LoginState extends State<Login> {
         width: MediaQuery
             .of(context)
             .size
-            .width / 1.5,
-        padding: const EdgeInsets.symmetric(vertical: 15),
+            .width / 1.2,
+        padding: const EdgeInsets.symmetric(vertical: 20),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-            borderRadius: BorderRadius.all(Radius.circular(5)),
+            borderRadius: const BorderRadius.all(Radius.circular(5)),
             boxShadow: <BoxShadow>[
               BoxShadow(
                   color: Colors.grey.shade200,
@@ -274,8 +312,8 @@ class _LoginState extends State<Login> {
   Widget _createAccountLabel() {
     return InkWell(
       child: Container(
-        margin: EdgeInsets.symmetric(vertical: 20),
-        padding: EdgeInsets.all(15),
+        margin: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.all(15),
         alignment: Alignment.bottomCenter,
       ),
     );
@@ -293,7 +331,7 @@ class _LoginState extends State<Login> {
       width: MediaQuery
           .of(context)
           .size
-          .width / 1.5,
+          .width / 1.2,
       child: Column(
         children: <Widget>[
           _entryField("Username :", txtUsername, isPassword: false),
@@ -308,7 +346,7 @@ class _LoginState extends State<Login> {
         width: MediaQuery
             .of(context)
             .size
-            .width / 1.5,
+            .width / 1.2,
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -322,19 +360,24 @@ class _LoginState extends State<Login> {
               DropdownButtonFormField<Company>(
                   value: compValue,
                   isExpanded: true,
+                  hint: const Text('เลือกบริษัท'),
                   items: companies.map((Company value) {
                     return DropdownMenuItem<Company>(
                       value: value,
                       child: Text(value.name ?? ''),
                     );
                   }).toList(),
-                  onTap: () => FocusScopeNode().unfocus(),
+                  // onTap: () => FocusScopeNode().unfocus(),
                   onChanged: (Company? value) {
                     setState(() {
-                      compValue = value;
-                      FocusScope.of(context).requestFocus(FocusNode());
-                      if (kDebugMode) {
-                        print(compValue?.name);
+                      if(value != null){
+                        compValue = value!;
+                        MY_COMPANY = compValue!;
+
+                        FocusScope.of(context).requestFocus(FocusNode());
+                        if (kDebugMode) {
+                          print(compValue?.name);
+                        }
                       }
                     });
                   },

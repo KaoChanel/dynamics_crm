@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 SalesOrderLine salesOrderLineFromJson(String str) => SalesOrderLine.fromJson(json.decode(str));
@@ -14,10 +15,13 @@ String salesOrderLineToJson(SalesOrderLine data) => json.encode(data.toJson());
 
 class SalesOrderLine {
   SalesOrderLine({
+    this.key,
     this.id,
     this.documentId,
     this.sequence,
     this.itemId,
+    this.itemCode = '',
+    this.itemName = '',
     this.accountId,
     this.lineType,
     this.lineObjectNumber,
@@ -29,16 +33,17 @@ class SalesOrderLine {
     this.discountType,
     this.discountAmount = 0,
     this.discountPercent = 0,
+    this.discountNumber = 0,
     this.discountAppliedBeforeTax,
     this.amountBeforeDiscount = 0,
-    this.amountExcludingTax,
     this.taxCode,
     this.taxPercent,
-    this.totalTaxAmount,
+    this.totalTaxAmount = 0,
     this.amountIncludingTax,
+    this.amountExcludingTax,
     this.invoiceDiscountAllocation,
     this.netAmount = 0,
-    this.netTaxAmount,
+    this.netTaxAmount = 0,
     this.netAmountIncludingTax,
     this.shipmentDate,
     this.shippedQuantity,
@@ -47,12 +52,16 @@ class SalesOrderLine {
     this.shipQuantity,
     this.itemVariantId,
     this.isFree = false,
+    this.isSelect = false,
   });
 
+  GlobalKey? key;
   String? id;
   String? documentId;
-  int? sequence = 0;
+  int? sequence;
   String? itemId;
+  String itemCode;
+  String itemName;
   String? accountId;
   String? lineType;
   String? lineObjectNumber;
@@ -61,19 +70,20 @@ class SalesOrderLine {
   String? unitOfMeasureCode;
   double? quantity = 0;
   double? unitPrice = 0;
-  String? discountType = 'PER';
-  double? discountAmount = 0;
-  double? discountPercent = 0;
+  String? discountType;
+  double? discountAmount;
+  double? discountPercent;
+  double? discountNumber;
   bool? discountAppliedBeforeTax;
-  double? amountExcludingTax;
   String? taxCode;
   double? taxPercent;
   double? totalTaxAmount;
   double? amountIncludingTax;
+  double? amountExcludingTax;
   double? amountBeforeDiscount;
   double? invoiceDiscountAllocation;
   double netAmount = 0;
-  double? netTaxAmount;
+  double? netTaxAmount = 0;
   double? netAmountIncludingTax;
   DateTime? shipmentDate;
   double? shippedQuantity;
@@ -82,6 +92,7 @@ class SalesOrderLine {
   double? shipQuantity;
   String? itemVariantId;
   bool isFree = false;
+  bool isSelect = false;
 
   SalesOrderLine copyWith({
     String? id,
@@ -99,6 +110,7 @@ class SalesOrderLine {
     String? discountType,
     double? discountAmount,
     double? discountPercent,
+    double? discountNumber,
     bool? discountAppliedBeforeTax,
     double? amountBeforeDiscount,
     double? amountExcludingTax,
@@ -117,6 +129,7 @@ class SalesOrderLine {
     double? shipQuantity,
     String? itemVariantId,
     bool isFree = false,
+    bool isSelect = false,
   }) =>
       SalesOrderLine(
         id: id ?? this.id,
@@ -134,6 +147,7 @@ class SalesOrderLine {
         discountType: discountType ?? this.discountType,
         discountAmount: discountAmount ?? this.discountAmount,
         discountPercent: discountPercent ?? this.discountPercent,
+        discountNumber: discountNumber ?? this.discountNumber,
         discountAppliedBeforeTax: discountAppliedBeforeTax ?? this.discountAppliedBeforeTax,
         amountBeforeDiscount: amountBeforeDiscount ?? this.amountBeforeDiscount,
         amountExcludingTax: amountExcludingTax ?? this.amountExcludingTax,
@@ -152,6 +166,7 @@ class SalesOrderLine {
         shipQuantity: shipQuantity ?? this.shipQuantity,
         itemVariantId: itemVariantId ?? this.itemVariantId,
         isFree: isFree,
+        isSelect: isSelect,
       );
 
   factory SalesOrderLine.fromJson(Map<String, dynamic> json) => SalesOrderLine(
@@ -229,8 +244,34 @@ class SalesOrderLineNotifier extends StateNotifier<List<SalesOrderLine>> {
     return state;
   }
 
+  List<SalesOrderLine> getBy(String keyword) {
+    List<SalesOrderLine> result = state.where((e) => e.itemCode.toLowerCase().contains(keyword.toLowerCase())
+        || e.itemName.toLowerCase().contains(keyword.toLowerCase())
+        // || e.itemCategoryCode != null ? e.itemCategoryCode!.toLowerCase().contains(keyword.toLowerCase()) : false
+        // || e.unitOfMeasureCode != null ? e.unitOfMeasureCode!.toLowerCase().contains(keyword.toLowerCase()) : true
+    ).toList();
+
+    return result;
+  }
+
   void add(SalesOrderLine object) {
     state = [...state, object];
+  }
+
+  void addAll(List<SalesOrderLine> objects) {
+    int index = 1;
+    for(var item in objects) {
+      state = [...state, item];
+    }
+
+    /// Re-order sequence.
+    for(var item in state) {
+      item.sequence = index++;
+    }
+  }
+
+  void replace(List<SalesOrderLine> objects) {
+    state = objects;
   }
 
   void edit(SalesOrderLine object) {
@@ -253,6 +294,10 @@ class SalesOrderLineNotifier extends StateNotifier<List<SalesOrderLine>> {
     for (SalesOrderLine element in state) {
       element.sequence = i++;
     }
+  }
+
+  void clear(){
+    state = [];
   }
 }
 

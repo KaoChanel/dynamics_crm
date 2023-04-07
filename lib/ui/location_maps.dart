@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_api_headers/google_api_headers.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:uuid/uuid.dart';
 
@@ -141,7 +142,7 @@ class _LocationMapsState extends State<LocationMaps> {
               onTap: _onTap,
             ),
           ),
-          Positioned(
+          widget.activity != Activity.checkIn ? Positioned(
             top: 10,
             right: 15,
             left: 15,
@@ -198,7 +199,7 @@ class _LocationMapsState extends State<LocationMaps> {
                       optionsBuilder: (TextEditingValue textEditingValue) async {
                         // _placeList = await ApiService(accessToken: '').getSuggestion(textEditingValue.text, _sessionToken);
                         // _placeList = await ApiService(accessToken: '').getSuggestion(textEditingValue.text, _sessionToken);
-                        _googlePlaceList = await ApiService(accessToken: '').getTextSearch(textEditingValue.text);
+                        _googlePlaceList = await ApiService().getTextSearch(textEditingValue.text);
                         return _googlePlaceList;
                         // return _placeList
                         //     .where((Map<String, String> continent) => continent.name.toLowerCase()
@@ -217,6 +218,8 @@ class _LocationMapsState extends State<LocationMaps> {
                           controller: fieldTextEditingController,
                           focusNode: fieldFocusNode,
                           decoration: InputDecoration(
+                            hintText: 'ชื่อคลีนิค, รพ.สัตว์, ฟาร์ม, สถานที่...',
+                            hintStyle: const TextStyle(fontWeight: FontWeight.normal, color: Colors.grey),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
                               borderSide: const BorderSide(width: 0, style: BorderStyle.none,),
@@ -248,7 +251,7 @@ class _LocationMapsState extends State<LocationMaps> {
                 ],
               ),
             ),
-          ),
+          ) : Container(),
         ],
       ),
       // floatingActionButtonLocation: FloatingActionButtonLocation.miniEndFloat,
@@ -294,12 +297,17 @@ class _LocationMapsState extends State<LocationMaps> {
       // ),
       bottomNavigationBar: ElevatedButton(
         onPressed: () {
-          Navigator.pop(context, selectLocation);
+          if(widget.activity == Activity.checkIn) {
+
+          }
+          else {
+            Navigator.pop(context, selectLocation);
+          }
         },
-        child: Text('ใช้งานตำแหน่งนี้', style: GoogleFonts.kanit(fontSize: 18.0)),
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 15.0)
         ),
+        child: Text('ใช้งานตำแหน่งนี้', style: GoogleFonts.kanit(fontSize: 18.0)),
       ),
     );
   }

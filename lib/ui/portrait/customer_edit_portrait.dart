@@ -48,7 +48,7 @@ class _CustomerEditPortraitState extends State<CustomerEditPortrait> {
 
   Province selectedProvince = Province(name: '');
   District selectedDistrict = District(name: '');
-  late int selectedNewTypeID;
+  late int selectedNewTypeID = 0;
 
   final _formKey = GlobalKey<FormState>();
 
@@ -68,7 +68,7 @@ class _CustomerEditPortraitState extends State<CustomerEditPortrait> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       SharedWidgets.showLoader(context, false);
 
-      await checkLocation();
+      // await checkLocation();
       // await _apiService.getCustomerLocation('Y',widget.customer.custId.toString()); // ดึง พิกัด
       //await getCustomerImages(widget.customer.custId); //ดึงข้อมูลรูปภาพ
       Navigator.pop(context);
@@ -215,7 +215,7 @@ class _CustomerEditPortraitState extends State<CustomerEditPortrait> {
                   ),
                 ),
 
-                typeList(),
+                // typeList(),
 
                 Container(
                   padding: const EdgeInsets.all(10.0),
@@ -744,7 +744,7 @@ class _CustomerEditPortraitState extends State<CustomerEditPortrait> {
       SharedWidgets.showLoader(context, false);
 
       try {
-        checkLocation();
+        await checkLocation();
 
         /// คำนวนระยะห่าง 5 กิโลเมตร
         double distance = distanceCalculate(CUSTOMER_LOCATION!, _locationData!, 'K');
@@ -811,7 +811,7 @@ class _CustomerEditPortraitState extends State<CustomerEditPortrait> {
 
   /// เช็ค พิกัด
   checkLocation() async {
-    _checkPermissions(); // เช็ค สิทธ์
+    await _checkPermissions(); // เช็ค สิทธ์
     if (!kIsWeb){ //ถ้าไม่ใช่เว็บไซต์
       if(_permissionGranted == PermissionStatus.denied || _permissionGranted == PermissionStatus.deniedForever || _permissionGranted == null) {
         showAlertRequestPermissionLocation(context);

@@ -3,6 +3,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:dynamics_crm/models/activity.dart';
+import 'package:dynamics_crm/models/billing_note.dart';
+import 'package:dynamics_crm/models/inventory.dart';
+import 'package:dynamics_crm/models/sales_quote.dart';
+import 'package:dynamics_crm/models/sales_quote_line.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -18,10 +23,12 @@ import 'package:dynamics_crm/models/sales_shipment.dart';
 import 'package:dynamics_crm/models/system_option.dart';
 import 'package:dynamics_crm/models/tax_group.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:location/location.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/company.dart';
 import '../models/customer_group.dart';
@@ -38,81 +45,99 @@ import '../models/unit.dart';
 import '../models/zipcode.dart';
 import '../ui/location_maps.dart';
 
+import 'package:dynamics_crm/providers/data_provider.dart';
+
 const String APP_NAME = 'SmartSales BIS';
 
 // color for apps
 const Color PRIMARY_COLOR = Color.fromRGBO(50, 54, 130, 1.0);
-const Color ASSENT_COLOR = Color(0xFFe75f3f);
+const Color ASSENT_COLOR = Color(0xFFe2e92b);
+
+// TextStyle
+const TextStyle GREY_STYLE = TextStyle(color: Colors.grey,);
 
 Company MY_COMPANY = Company(
     name: 'BioScience Animal Health', displayName: 'BioScience Animal Health');
-String SERVER_ERP_URL =
-    'https://smartsalesbis.com/api/v2.0/companies(${MY_COMPANY.id})/';
-String SERVER_BIS_URL = 'https://smartsalesbis.com/api/${MY_COMPANY.id}/';
+String SERVER_ERP_URL = 'http://app05.naviworldth.com:19028/BIS_Live/api/nwth/bis/v2.0/';
+String SERVER_BIS_URL = 'https://smartsalesbis.com/api/';
 String GOOGLE_MAP_API = 'AIzaSyCgCn4EebVBR3d0dXLFBwlXa8I1_WXSQDI';
 String FCM_TOKEN = '';
 LatLng DEFAULT_LOCATION = const LatLng(13.9271307, 100.5330154);
 
-late List<Item> ITEMS = [
-  Item(
-      id: '1001',
-      code: 'P1000',
-      displayName: 'อาหารสุนัข',
-      baseUnitOfMeasureId: '1000',
-      baseUnitOfMeasureCode: 'Bag',
-      unitPrice: 159),
-  Item(
-      id: '1002',
-      code: 'P1001',
-      displayName: 'อาหารแมว',
-      baseUnitOfMeasureId: '1000',
-      baseUnitOfMeasureCode: 'Bag',
-      unitPrice: 115),
-  Item(
-      id: '1003',
-      code: 'P1002',
-      displayName: 'อาหารหมู',
-      baseUnitOfMeasureId: '1000',
-      baseUnitOfMeasureCode: 'Bag',
-      unitPrice: 95),
-  Item(
-      id: '1004',
-      code: 'P1003',
-      displayName: 'อาหารปลา',
-      baseUnitOfMeasureId: '1000',
-      baseUnitOfMeasureCode: 'Bag',
-      unitPrice: 65),
-  Item(
-      id: '1005',
-      code: 'P1004',
-      displayName: 'อาหารไก่และเป็ด',
-      baseUnitOfMeasureId: '1000',
-      baseUnitOfMeasureCode: 'Bag',
-      unitPrice: 80),
-  Item(
-      id: '1006',
-      code: 'P1005',
-      displayName: 'วัคซีน Vaccine',
-      baseUnitOfMeasureId: '1001',
-      baseUnitOfMeasureCode: 'Pack',
-      unitPrice: 890)
-];
+List<Item> ITEMS = [];
 
-late List<Unit> UNITS = [
-  Unit(id: '1000', code: 'PCS', displayName: 'PCS'),
-  Unit(id: '1001', code: 'Box', displayName: 'Box'),
-  Unit(id: '1002', code: 'Bag', displayName: 'Bag'),
-  Unit(id: '1003', code: 'Pack', displayName: 'Pack')
-];
+// late List<Item> ITEMS = [
+//   Item(
+//       id: '1001',
+//       code: 'P1000',
+//       displayName: 'อาหารสุนัข',
+//       baseUnitOfMeasureId: '1000',
+//       baseUnitOfMeasureCode: 'Bag',
+//       unitPrice: 159
+//   ),
+//   Item(
+//       id: '1002',
+//       code: 'P1001',
+//       displayName: 'อาหารแมว',
+//       baseUnitOfMeasureId: '1000',
+//       baseUnitOfMeasureCode: 'Bag',
+//       unitPrice: 115
+//   ),
+//   Item(
+//       id: '1003',
+//       code: 'P1002',
+//       displayName: 'อาหารหมู',
+//       baseUnitOfMeasureId: '1000',
+//       baseUnitOfMeasureCode: 'Bag',
+//       unitPrice: 95
+//   ),
+//   Item(
+//       id: '1004',
+//       code: 'P1003',
+//       displayName: 'อาหารปลา',
+//       baseUnitOfMeasureId: '1000',
+//       baseUnitOfMeasureCode: 'Bag',
+//       unitPrice: 65
+//   ),
+//   Item(
+//       id: '1005',
+//       code: 'P1004',
+//       displayName: 'อาหารไก่และเป็ด',
+//       baseUnitOfMeasureId: '1000',
+//       baseUnitOfMeasureCode: 'Bag',
+//       unitPrice: 80
+//   ),
+//   Item(
+//       id: '1006',
+//       code: 'P1005',
+//       displayName: 'วัคซีน Vaccine',
+//       baseUnitOfMeasureId: '1001',
+//       baseUnitOfMeasureCode: 'Pack',
+//       unitPrice: 890
+//   )
+// ];
 
+// late List<Unit> UNITS = [
+//   Unit(id: '1000', code: 'PCS', displayName: 'PCS'),
+//   Unit(id: '1001', code: 'Box', displayName: 'Box'),
+//   Unit(id: '1002', code: 'Bag', displayName: 'Bag'),
+//   Unit(id: '1003', code: 'Pack', displayName: 'Pack')
+// ];
+
+List<Unit> UNITS = [];
+
+Activity TAB_INDEX = Activity.total;
+Activity CHART_CYCLE = Activity.monthly;
 late TaxGroup TAX = TaxGroup();
 late SystemOption SYSTEM_OPTION = SystemOption(loadDocItem: 50, limitRadius: 50.0);
-late Customer? CUSTOMER = Customer();
+late Customer CUSTOMER = Customer();
 late SalesShipment SHIPMENT = SalesShipment();
 late CustomerFinancialDetail? CUSTOMER_FINANCIAL;
-late LocationData? CUSTOMER_LOCATION;
-late Employee? EMPLOYEE = Employee();
+late LocationData? CUSTOMER_LOCATION = null;
+List<SalesShipment> CUSTOMER_SHIPMENTS = [];
+Employee EMPLOYEE = Employee();
 late EmployeeOption? EMPLOYEE_OPTION;
+late List<Inventory> INVENTORY = [];
 
 List<Province> PROVINCES = [];
 List<District> DISTRICTS = [];
@@ -132,6 +157,7 @@ List<ItemGroup> ITEM_GROUP = [
   ItemGroup(displayName: 'เก็บเช็ค'),
   ItemGroup(displayName: 'อื่น ๆ'),
 ];
+
 List<ItemType> ITEM_TYPE = [
   ItemType(displayName: 'กลุ่มลูกค้าเป้าหมาย'),
   ItemType(displayName: 'วางบิล'),
@@ -208,19 +234,20 @@ final ORDER_STATUS = <Dropdown>[
 ];
 
 List<Customer> MY_CUSTOMERS = [
-  Customer(code: '10-100-001', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 1)'),
-  Customer(code: '10-100-002', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 2)'),
-  Customer(code: '10-100-003', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 3)'),
-  Customer(code: '10-100-004', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 4)'),
-  Customer(code: '10-100-005', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 5)'),
-  Customer(code: '10-100-006', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 6)'),
+  Customer(id: '1', code: '10-100-001', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 1)', latitude: DEFAULT_LOCATION.latitude.toString(), longitude: DEFAULT_LOCATION.longitude.toString()),
+  Customer(id: '2', code: '10-100-002', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 2)'),
+  Customer(id: '3', code: '10-100-003', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 3)'),
+  Customer(id: '4', code: '10-100-004', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 4)'),
+  Customer(id: '5', code: '10-100-005', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 5)'),
+  Customer(id: '6', code: '10-100-006', displayName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 6)'),
 ];
 
-List<SalesOrder> SALES_ORDER = [
-  SalesOrder(id: '1', number: 'SO-230113-0002', requestedDeliveryDate: DateTime.now(), discountType: 'PER', discountAmount: 5, status: 'OPEN'),
-  SalesOrder(id: '2', number: 'SO-230112-0002', requestedDeliveryDate: DateTime.now(), discountType: 'PER', discountAmount: 3, status: 'RELEASE'),
-  SalesOrder(id: '3', number: 'SO-230112-0001', requestedDeliveryDate: DateTime.now(), discountType: 'THB', discountAmount: 99, status: 'RELEASE'),
-];
+List<SalesOrder> SALES_ORDER = [];
+// List<SalesOrder> SALES_ORDER = [
+//   SalesOrder(customerId: '1', customerNumber: '10-100-001', customerName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 1)', id: '1', number: 'SO-230113-0002', requestedDeliveryDate: DateTime.now(), discountType: 'PER', discountAmount: 5, status: 'DRAFT'),
+//   SalesOrder(customerId: '2', customerNumber: '10-100-002', customerName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 2)', id: '3', number: 'SO-230112-0002', requestedDeliveryDate: DateTime.now(), discountType: 'PER', discountAmount: 3, status: 'OPEN'),
+//   SalesOrder(customerId: '1', customerNumber: '10-100-001', customerName: 'บริษัท เมืองทอง รักสัตว์ จำกัด (สาขา 1)', id: '1', number: 'SO-230112-0001', requestedDeliveryDate: DateTime.now(), discountType: 'THB', discountAmount: 99, status: 'OPEN'),
+// ];
 
 List<SalesOrderLine> SALES_ORDER_LINES = [
   SalesOrderLine(
@@ -286,42 +313,49 @@ List<SalesOrderLine> SALES_ORDER_LINES = [
   SalesOrderLine(
     documentId: '3',
     sequence: 3,
-    itemId: '1004',
-    quantity: 1,
+    itemId: '1006',
+    quantity: 2,
     unitOfMeasureId: '1001',
-    unitPrice: 100,
+    unitPrice: 800,
     discountType: 'PER',
     discountPercent: 0,
     discountAmount: 0,
-    netAmount: 100
+    netAmount: 1600
   ),
 ];
 
 var companies = <Company>[
   Company(
-    name: 'BioScience Animal Health',
+    name: 'BIO',
+    displayName: 'BioScience Animal Health'
   ),
   Company(
-    name: 'Nutrition Improvement Company',
+    name: 'NIC',
+    displayName: 'Nutrition Improvement Company'
   ),
   Company(
-    name: 'Special Ingredient Services',
+    name: 'SIS',
+    displayName: 'Special Ingredient Services'
   ),
   Company(
-    name: 'Faith',
+    name: 'FAITH',
+    displayName: 'Feed And Ingredient Technology Hub'
   ),
   Company(
-    name: 'PedEx',
+    name: 'PEDEX',
+    displayName: 'PedEx'
   ),
   Company(
     name: 'IDEXX',
+    displayName: 'IDEXX'
   ),
   // Company(
   //   compCode: 'PEDEXTEST',
   //   compName: 'PED EX (Test)',
   // ),
   Company(
-    name: 'Pro Test-Kit',
+    name: 'PTK',
+    displayName: 'Pro Test-Kit'
   ),
   // Company(
   //   compCode: 'BIOTEST',
@@ -361,15 +395,19 @@ NumberFormat LEADING_ZERO = NumberFormat('#,#00', 'en_US');
 DateFormat DATE_FORMAT = DateFormat('dd/MM/yyyy');
 DateFormat DATE_FORMAT_TH = DateFormat('dd MMMM yyyy', 'th');
 
-String COMPANY_API = "${SERVER_ERP_URL}companies";
-String EMPLOYEE_API = "${SERVER_ERP_URL}employees";
-String CUSTOMER_API = "${SERVER_ERP_URL}customers";
+String COMPANIES_API = "${SERVER_ERP_URL}companies";
+String EMPLOYEE_API = "${SERVER_ERP_URL}companies(${MY_COMPANY.id})/bissalepersons";
+String CUSTOMER_API = "${SERVER_ERP_URL}companies(${MY_COMPANY.id})/customers";
 String MY_CUSTOMER_API = "${SERVER_ERP_URL}customers?\$filter=id=''";
-String ALL_CUSTOMER_API =
-    "${SERVER_ERP_URL}customers?\$expand=picture, currency, paymentMethod";
-String QUOTATION_API = "${SERVER_ERP_URL}salesquote";
-String ORDERS_API = "${SERVER_ERP_URL}salesorders";
-String ITEM_LIST_API = "${SERVER_ERP_URL}item";
+String ALL_CUSTOMER_API = "${SERVER_ERP_URL}customers?\$expand=picture, currency, paymentMethod";
+String QUOTATION_API = "${SERVER_ERP_URL}companies(${MY_COMPANY.id})/salesquote";
+String ORDERS_API = "${SERVER_ERP_URL}companies(${MY_COMPANY.id})/bissalesheaders";
+String ORDERS_LINE_API = "${SERVER_ERP_URL}companies(${MY_COMPANY.id})/bissaleslines";
+String SHIPMENT_API = "${SERVER_ERP_URL}companies(${MY_COMPANY.id})/bisshiptoaddresses";
+String ITEMS_API = "${SERVER_ERP_URL}companies(${MY_COMPANY.id})/bisItemAPIs";
+String UNITS_API = "${SERVER_ERP_URL}companies(${MY_COMPANY.id})/bisunitofmeasures";
+String REMARK_API = "${SERVER_BIS_URL}SaleOrderHeader/GetTbmRemark/";
+String NEWS_API = "${SERVER_BIS_URL}News/${MY_COMPANY.name}/";
 
 extension ThaiDateFormatter on DateFormat {
   String formatInBuddhistCalendarThai(DateTime dateTime) {
@@ -411,6 +449,16 @@ extension ThaiDateFormatter on DateFormat {
   }
 }
 
+extension ListUtility<T> on List<T> {
+  num sumBy(num Function(T element) f) {
+    num sum = 0;
+    for(var item in this) {
+      sum += f(item);
+    }
+    return sum;
+  }
+}
+
 readThailandInfo() async {
   // Read the JSON file
   // final file = File('assets/thailand_information/thailand.json');
@@ -425,6 +473,7 @@ loadProvince() async {
   String temp = '';
   PROVINCES = [];
   final data = await readThailandInfo();
+  loadingMessage = StateProvider((ref) => 'ข้อมูลจังหวัด');
 
   data.forEach((obj) {
     if(obj != null) {
@@ -440,6 +489,7 @@ loadDistrict() async {
   String temp = '';
   DISTRICTS = [];
   final data = await readThailandInfo();
+  loadingMessage = StateProvider((ref) => 'ข้อมูลอำเภอ');
 
   data.forEach((obj) {
     if(obj != null) {
@@ -455,6 +505,7 @@ loadDistrictSub() async {
   String temp = '';
   DISTRICT_SUB = [];
   final data = await readThailandInfo();
+  loadingMessage = StateProvider((ref) => 'ข้อมูลตำบล');
 
   data.forEach((obj) {
     if(obj != null) {
@@ -508,6 +559,13 @@ bool checkQuantity(double qty) {
   return true;
 }
 
+double stockCount(Inventory stock) {
+  double amount = 0;
+  INVENTORY.where((e) => e.goodid == stock.goodid).toList().forEach((e) => amount += e.remaqty ?? 0);
+
+  return amount;
+}
+
 bool checkCredit(double netTotal) {
   if (SYSTEM_OPTION.isLockPriceLower == 'Y') {
     double limitAmount = CUSTOMER_FINANCIAL?.balance ?? 0;
@@ -551,6 +609,14 @@ bool checkLowerPrice() {
   return false;
 }
 
+changeDiscountType(String type){
+  if(type == 'PER'){
+    return 'THB';
+  }
+
+  return type;
+}
+
 changeCustomer(Customer customer) {
   CUSTOMER = customer;
 
@@ -584,6 +650,18 @@ SalesOrderLine discountCalculate(bool type, String discount, SalesOrderLine orde
   return orderItem;
 }
 
+amountCalculate(bool isPercent, String discount, SalesOrderLine orderItem) {
+  if(orderItem.isFree) {
+    orderItem.unitPrice = 0;
+  }
+
+  orderItem.amountBeforeDiscount = orderItem.quantity! * (orderItem.unitPrice ?? 0);
+  orderItem = discountCalculate(isPercent, discount, orderItem);
+  orderItem.netAmount = orderItem.amountBeforeDiscount! - orderItem.discountAmount!;
+
+  return orderItem;
+}
+
 totalPrice() {
 
 }
@@ -606,16 +684,16 @@ Order totalSummary(SalesOrder header, List<SalesOrderLine> orders) {
 
     }
 
-    discountBill = header.discountAmount ?? 0;
+    discountBill = header.invdiscountamt ?? 0;
     //priceTotal = priceTotal - discountTotal;
 
     if (header.discountType == 'PER') {
-      double percentDiscount = header.discountAmount! / 100;
-      header.discountAmount = (percentDiscount * priceTotal);
-      priceAfterDiscount = priceTotal - header.discountAmount!;
+      double percentDiscount = (header.invdiscountamt ?? 0) / 100;
+      header.invdiscountamt = (percentDiscount * priceTotal);
+      priceAfterDiscount = priceTotal - header.invdiscountamt!;
     } else {
-      header.discountAmount = discountBill;
-      priceAfterDiscount = priceTotal - header.discountAmount!;
+      header.invdiscountamt = discountBill;
+      priceAfterDiscount = priceTotal - header.invdiscountamt!;
     }
 
     double sumGoodsHasVat = 0;
@@ -633,10 +711,10 @@ Order totalSummary(SalesOrder header, List<SalesOrderLine> orders) {
 
     // sumGoodsHasVat = sumGoodsHasVat - globals.discountBillDraft.amount;
     if(sumGoodsHasVat != 0) {
-      sumGoodsHasVat = sumGoodsHasVat - header.netAmount!;
+      sumGoodsHasVat = sumGoodsHasVat - header.grandtotal!;
     }
     else{
-      sumGoodsHasNoVat = sumGoodsHasNoVat - header.netAmount!;
+      sumGoodsHasNoVat = sumGoodsHasNoVat - header.grandtotal!;
     }
 
     print('sumGoodsHasVat : $sumGoodsHasVat');
@@ -657,14 +735,14 @@ Order totalSummary(SalesOrder header, List<SalesOrderLine> orders) {
       netTotal = priceAfterDiscount;
     }
 
-    header.totalTaxAmount = vatBase;
-    header.discountAmount = discountBill;
-    header.netAmount = netTotal;
+    header.vatbaseamount = vatBase;
+    header.invdiscountamt = discountBill;
+    header.grandtotal = netTotal;
 
     return Order(header, orders);
 
   } catch (e) {
-    throw Exception();
+    throw Exception(e.toString());
   }
 }
 
@@ -672,9 +750,22 @@ Widget docCounter(StreamController streamController) {
   return StreamBuilder(
     stream: streamController.stream,
     builder: (context, snapshot) {
-      return Text(
-        'รายการเอกสาร (${snapshot.data ?? 0} เอกสาร)',
-        style: const TextStyle(color: Colors.white, fontSize: 20),
+      return Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'รายการเอกสาร ',
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '${snapshot.data ?? 0} รายการ',
+              textAlign: TextAlign.right,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+        ],
       );
     },
   );
@@ -746,5 +837,113 @@ changeLocationMarker(LatLng location) {
 
 changeCameraPosition(LatLng location) {
   // specified current users location
-  return CameraPosition(zoom: 20, target: location);
+  return CameraPosition(zoom: 22, target: location);
+}
+
+getBillingNote(BillingNote? note, [int? day, int? hour, int? minute]) {
+  switch(note) {
+    case BillingNote.no_billing :
+      return 'ไม่ต้องวางบิล';
+    case BillingNote.billing_note :
+      return 'ต้องการวางบิล';
+      case BillingNote.delivery_billling :
+        return 'ส่งสินค้า & วางบิล';
+  }
+}
+
+SalesQuoteLine toSalesQuote(SalesOrderLine orderItem) {
+  SalesQuoteLine object = SalesQuoteLine()
+    ..key = GlobalKey()
+    ..itemId = orderItem.itemId
+    ..id = const Uuid().v4()
+    ..sequence = orderItem.sequence
+    ..quantity = orderItem.quantity
+    ..unitOfMeasureId = orderItem.unitOfMeasureId
+    ..unitOfMeasureCode = orderItem.unitOfMeasureCode
+    ..unitPrice = orderItem.unitPrice
+    ..discount = orderItem.discountPercent
+    ..discountAmount = orderItem.discountAmount
+    ..totalTaxAmount = orderItem.totalTaxAmount
+    ..amountIncludingTax = orderItem.amountIncludingTax
+    ..amountExcludingTax = orderItem.amountExcludingTax
+    ..netAmount = orderItem.netAmount
+    ..netTaxAmount = orderItem.netTaxAmount
+    ..netAmountIncludingTax = orderItem.netAmountIncludingTax
+    ..isFree = false
+    ..isSelect = false;
+
+  return object;
+}
+
+toSalesOrder(SalesQuote quote){
+  return SalesOrder()
+    ..salespersonCode = quote.salesperson
+    ..sellToCustomerNo = quote.customerNumber
+    ..discountType = quote.discountType!
+    ..invdiscountpct = quote.discount
+    ..invdiscountamt = quote.discountAmount
+    ..grandtotal = quote.netAmount ?? 0
+    ..salecmttxt = quote.remark
+    ..status = quote.status;
+}
+
+toSalesOrderLineSingle({Item? item, SalesQuoteLine? quote}) {
+  if(item != null){
+    return SalesOrderLine()
+      ..key = GlobalKey()
+      ..id = const Uuid().v4()
+      ..itemId = item.id
+      ..itemCode = item.no ?? ''
+      ..itemName = item.description ?? ''
+      ..unitOfMeasureId = item.baseUnitOfMeasure
+      ..unitOfMeasureCode = item.baseuomdescription
+      ..unitPrice = item.unitPrice
+      ..isFree = false
+      ..isSelect = false;
+  }
+  else{
+    return SalesOrderLine()
+      ..itemId = quote!.itemId
+      ..itemVariantId = quote.itemVariantId
+      ..sequence = quote.sequence
+      ..quantity = quote.quantity
+      ..unitOfMeasureId = quote.unitOfMeasureId
+      ..unitOfMeasureCode = quote.unitOfMeasureCode
+      ..unitPrice = quote.unitPrice
+      ..discountType = quote.discountType
+      ..discountAmount = quote.discountAmount
+      ..netAmount = quote.netAmount;
+  }
+
+}
+
+toSalesOrderLine(List<Item> items, [List<SalesQuoteLine>? quote, double qty = 0]) {
+  List<SalesOrderLine> saleOrderDetails = [];
+  List<SalesQuoteLine> saleQuoteDetails = [];
+
+  if(quote != null) {
+    return saleQuoteDetails;
+  }
+  else {
+    int index = 0;
+    for (var e in items) {
+      index++;
+      SalesOrderLine value = SalesOrderLine()
+        ..key = GlobalKey()
+        ..id = const Uuid().v4()
+        ..itemId = e.id
+        ..itemCode = e.no ?? ''
+        ..itemName = e.description ?? ''
+        ..sequence = index
+        ..quantity = qty
+        ..unitOfMeasureId = e.baseUnitOfMeasure
+        ..unitOfMeasureCode = e.baseuomdescription
+        ..unitPrice = e.unitPrice
+        ..isFree = false
+        ..isSelect = false;
+      saleOrderDetails.add(value);
+    }
+
+    return saleOrderDetails;
+  }
 }

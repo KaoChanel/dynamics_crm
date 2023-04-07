@@ -2,22 +2,25 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
-import 'package:badges/badges.dart';
+// import 'package:badges/badges.dart';
 import 'package:dynamics_crm/config/global_constants.dart';
 import 'package:dynamics_crm/models/item.dart';
 import 'package:dynamics_crm/models/sales_quote.dart';
 import 'package:dynamics_crm/models/sales_shipment.dart';
+import 'package:dynamics_crm/providers/data_provider.dart';
 import 'package:dynamics_crm/widgets/shared_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:quickalert/models/quickalert_type.dart';
 import 'package:quickalert/widgets/quickalert_dialog.dart';
 
 import '../../models/customer.dart';
 import '../../models/activity.dart';
+import '../../models/debounce.dart';
 import '../../models/order.dart';
 import '../../models/sales_order.dart';
 import '../../models/sales_order_line.dart';
@@ -25,79 +28,15 @@ import 'item_edit_portrait.dart';
 import 'item_select.dart';
 
 class SalesOrderDraftPortrait extends ConsumerStatefulWidget {
+  const SalesOrderDraftPortrait({Key? key, required this.header}) : super(key: key);
 
   final SalesOrder header;
-
-  const SalesOrderDraftPortrait({Key? key, required this.header}) : super(key: key);
 
   @override
   ConsumerState<SalesOrderDraftPortrait> createState() => _SalesOrderDraftPortraitState();
 }
 
 class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrait> {
-  Timer? timer;
-  String runningNo = '';
-  String docuNo = '';
-  String refNo = '';
-  String custPONo = '';
-  String creditState = '';
-  double vat = 0.07;
-  // double priceTotal = 0;
-  // double discountTotal = 0;
-  // double discountBill = 0;
-  // double priceAfterDiscount = 0;
-  // double vatTotal = 0.0;
-  // double netTotal = 0.0;
-  // ApiService _apiService = new ApiService();
-  DateTime _docuDate = DateTime.now();
-  DateTime _shiptoDate = DateTime.now().add(const Duration(hours: 24));
-  DateTime _orderDate = DateTime.now();
-
-  List<Item> orderItems = <Item>[];
-  SalesQuote quotation = SalesQuote();
-  SalesOrder salesOrder = SalesOrder();
-  SalesShipment shipToAddress = SalesShipment();
-  List<SalesOrderLine> salesOrderLines = <SalesOrderLine>[];
-  List<SalesOrderLine> myOrders = [];
-  // SoHeaderRemark headerRemark = SoHeaderRemark();
-  // List<SoDetailRemark> detailRemark = <SoDetailRemark>[];
-
-  FocusNode focusDiscount = FocusNode();
-  TextEditingController txtRunningNo = TextEditingController();
-  TextEditingController txtDocuNo = TextEditingController();
-  TextEditingController txtRefNo = TextEditingController();
-  TextEditingController txtCustPONo = TextEditingController();
-  TextEditingController txtSONo = TextEditingController();
-  TextEditingController txtQuotationNo = TextEditingController();
-  TextEditingController txtDeptCode = TextEditingController();
-  TextEditingController txtCopyDocuNo = TextEditingController();
-  TextEditingController txtEmpCode = TextEditingController();
-  TextEditingController txtEmpName = TextEditingController();
-  TextEditingController txtCustCode = TextEditingController();
-  TextEditingController txtCustName = TextEditingController();
-  TextEditingController txtCreditType = TextEditingController();
-  TextEditingController txtCredit = TextEditingController();
-  TextEditingController txtStatus = TextEditingController();
-  TextEditingController txtRemark = TextEditingController();
-
-  TextEditingController txtShiptoName = TextEditingController();
-  TextEditingController txtShiptoCode = TextEditingController();
-  TextEditingController txtShiptoProvince = TextEditingController();
-  TextEditingController txtShiptoAddress = TextEditingController();
-  TextEditingController txtShiptoRemark = TextEditingController();
-  TextEditingController txtPriceTotal = TextEditingController();
-  TextEditingController txtDiscountTotal = TextEditingController();
-  TextEditingController txtDiscountBill = TextEditingController();
-  TextEditingController txtPriceAfterDiscount = TextEditingController();
-  TextEditingController txtVatTotal = TextEditingController();
-  TextEditingController txtNetTotal = TextEditingController();
-
-  TextEditingController txtDocuDate = TextEditingController(
-      text: DATE_FORMAT.format(DateTime.now()));
-  TextEditingController txtShiptoDate = TextEditingController(
-      text: DATE_FORMAT.format(DateTime.now().add(const Duration(hours: 24))));
-  TextEditingController txtOrderDate = TextEditingController(
-      text: DATE_FORMAT.format(DateTime.now()));
 
   @override
   void initState() {
@@ -105,14 +44,21 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
     super.initState();
 
     salesOrder = widget.header;
-    myOrders = SALES_ORDER_LINES.where((e) => e.documentId == salesOrder.id).toList();
-    totalSummary(salesOrder, myOrders);
-    bindingController();
+    // myOrders = SALES_ORDER_LINES.where((e) => e.documentId == salesOrder.id).toList();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      ref.read(salesOrderLinesDraft).clear();
+      ref.read(salesOrderLinesDraft).addAll(SALES_ORDER_LINES.where((e) => e.documentId == salesOrder.systemId).toList());
+      // totalSummary(salesOrder, myOrders);
+      bindingController();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     double headerWidth = MediaQuery.of(context).size.width * 0.98;
+    myOrders = ref.watch(salesOrderLinesDraft);
+    Order order = totalSummary(salesOrder, myOrders);
+    // ref.read(salesOrderDraft.notifier).edit(order.header);
 
     return WillPopScope(
       onWillPop: _onWillPop,
@@ -122,22 +68,29 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
             title: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               verticalDirection: VerticalDirection.up,
-              children: [
-                const Text("Sales Order "),
+              children: const [
+                Text("Sales Order "),
                 Badge(
-                  elevation: 1.5,
-                  shape: BadgeShape.square,
-                  badgeColor: PRIMARY_COLOR,
-                  animationType: BadgeAnimationType.scale,
-                  borderRadius: BorderRadius.circular(5.0),
-                  borderSide: BorderSide.lerp(
-                      const BorderSide(color: PRIMARY_COLOR, width: 1),
-                      const BorderSide(color: PRIMARY_COLOR, width: 1),
-                      0.5
-                  ),
-                  badgeContent: const Text("DRAFT", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.white),),
+                  backgroundColor: PRIMARY_COLOR,
+                  label: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 3.0),
+                    child: Text("DRAFT", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.white),),
+                  )
                 ),
-              ],
+                // Badge(
+                //   elevation: 1.5,
+                //   shape: BadgeShape.square,
+                //   badgeColor: PRIMARY_COLOR,
+                //   animationType: BadgeAnimationType.scale,
+                //   borderRadius: BorderRadius.circular(5.0),
+                //   borderSide: BorderSide.lerp(
+                //       const BorderSide(color: PRIMARY_COLOR, width: 1),
+                //       const BorderSide(color: PRIMARY_COLOR, width: 1),
+                //       0.5
+                //   ),
+                //   badgeContent: const Text("DRAFT", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.white),),
+                // ),
+              ]
             ),
           ),
           body: Container(
@@ -160,28 +113,28 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                         margin: const EdgeInsets.only(top: 11),
                         padding: const EdgeInsets.all(10),
                         width: headerWidth,
-                        //color: Colors.indigo,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '${salesOrder.number}',
-                              style: TextStyle(color: Colors.white, fontSize: 18),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(right: 10.0),
-                              child: Text('${DATE_FORMAT_TH.formatInBuddhistCalendarThai(_docuDate)}', style: TextStyle(color: Colors.white)),
-                            )
-                          ],
-                        ),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.only(
+                          borderRadius: const BorderRadius.only(
                               topRight: Radius.circular(20),
                               bottomRight: Radius.circular(0)),
                           color: Theme.of(context).primaryColor,
                           // boxShadow: [
                           //   BoxShadow(color: Colors.green, spreadRadius: 3),
                           // ],
+                        ),
+                        //color: Colors.indigo,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${salesOrder.no}',
+                              style: const TextStyle(color: Colors.white, fontSize: 18),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 10.0),
+                              child: Text(DATE_FORMAT_TH.formatInBuddhistCalendarThai(_docuDate), style: const TextStyle(color: Colors.white)),
+                            )
+                          ],
                         ),
                       ),
                     ],
@@ -321,7 +274,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: TextFormField(
                           readOnly: true,
-                          initialValue: '${EMPLOYEE?.displayName ?? ''} (${EMPLOYEE?.code ?? ''})',
+                          initialValue: '${EMPLOYEE?.name ?? ''} (${EMPLOYEE?.code ?? ''})',
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                             contentPadding: EdgeInsets.symmetric(
@@ -450,7 +403,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                               child: ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(vertical: 10.0),
-                                    shape: RoundedRectangleBorder(
+                                    shape: const RoundedRectangleBorder(
                                         borderRadius: BorderRadius.all(Radius.circular(20.0))
                                     )
                                   ),
@@ -469,7 +422,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                                   style: ElevatedButton.styleFrom(
                                     primary: Colors.blueGrey,
                                     padding: const EdgeInsets.symmetric(vertical: 10.0),
-                                    shape: RoundedRectangleBorder(
+                                    shape: const RoundedRectangleBorder(
                                         borderRadius: BorderRadius.all(Radius.circular(20.0)
                                         )
                                     ),
@@ -506,15 +459,15 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                         margin: const EdgeInsets.only(top: 11),
                         padding: const EdgeInsets.all(10),
                         width: headerWidth,
-                        child: Text(
-                          'รายการสินค้า',
-                          style: TextStyle(color: Colors.white, fontSize: 18),
-                        ),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.only(
+                          borderRadius: const BorderRadius.only(
                               topRight: Radius.circular(20),
                               bottomRight: Radius.circular(0)),
                           color: Theme.of(context).primaryColor,
+                        ),
+                        child: const Text(
+                          'รายการสินค้า',
+                          style: TextStyle(color: Colors.white, fontSize: 18),
                         ),
                       ),
                     ],
@@ -559,15 +512,15 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                         margin: const EdgeInsets.only(top: 11),
                         padding: const EdgeInsets.all(10),
                         width: headerWidth,
-                        child: Text(
-                          'ท้ายบิล ใบสั่งขาย',
-                          style: TextStyle(color: Colors.white, fontSize: 20),
-                        ),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.only(
+                          borderRadius: const BorderRadius.only(
                               topRight: Radius.circular(20),
                               bottomRight: Radius.circular(0)),
                           color: Theme.of(context).primaryColor,
+                        ),
+                        child: const Text(
+                          'ท้ายบิล ใบสั่งขาย',
+                          style: TextStyle(color: Colors.white, fontSize: 20),
                         ),
                       ),
                     ],
@@ -597,7 +550,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                     child: TextFormField(
                       controller: txtRemark,
                       maxLength: 80,
-                      maxLines: 5,
+                      maxLines: 3,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(
@@ -617,53 +570,65 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                     height: 10.0,
                   ),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      // Padding(
-                      //   padding: const EdgeInsets.all(8.0),
-                      //   child: Text('รวมส่วนลด',
-                      //       textAlign: TextAlign.right,
-                      //       style: TextStyle(
-                      //           fontSize: 18, fontWeight: FontWeight.bold)),
-                      // ),
-                      Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.all(8.0),
-                            child: TextFormField(
-                              readOnly: true,
-                              textAlign: TextAlign.right,
-                              controller: txtDiscountTotal,
-                              decoration: const InputDecoration(
-                                labelText: 'รวมส่วนลด',
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 0),
-                              ),
-                            ),
-                          )),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        // Padding(
+                        //   padding: const EdgeInsets.all(8.0),
+                        //   child: Text('รวมส่วนลด',
+                        //       textAlign: TextAlign.right,
+                        //       style: TextStyle(
+                        //           fontSize: 18, fontWeight: FontWeight.bold)),
+                        // ),
+
+                        const Expanded(child: Text('รวมส่วนลด')),
+                        Expanded(child: Text(CURRENCY.format(myOrders.sumBy((e) => e.discountAmount ?? 0)), textAlign: TextAlign.right)),
+                        // Flexible(
+                        //     child: Container(
+                        //       padding: const EdgeInsets.all(8.0),
+                        //       child: TextFormField(
+                        //         readOnly: true,
+                        //         textAlign: TextAlign.right,
+                        //         controller: txtDiscountTotal,
+                        //         decoration: const InputDecoration(
+                        //           labelText: 'รวมส่วนลด',
+                        //           border: OutlineInputBorder(),
+                        //           contentPadding: EdgeInsets.symmetric(
+                        //               horizontal: 10, vertical: 0),
+                        //         ),
+                        //       ),
+                        //     )
+                        // ),
+                      ],
+                    ),
                   ),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: TextFormField(
-                            readOnly: true,
-                            controller: txtPriceTotal,
-                            textAlign: TextAlign.right,
-                            decoration: const InputDecoration(
-                              labelText: 'รวมเงิน',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 0),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      children: [
+                        const Expanded(child: Text('รวมเงิน')),
+                        Expanded(child: Text(CURRENCY.format(salesOrder.subtotal), textAlign: TextAlign.right)),
+                        // Expanded(
+                        //   child: Padding(
+                        //     padding: const EdgeInsets.all(10.0),
+                        //     child: TextFormField(
+                        //       readOnly: true,
+                        //       controller: txtPriceTotal,
+                        //       textAlign: TextAlign.right,
+                        //       decoration: const InputDecoration(
+                        //         labelText: 'รวมเงิน',
+                        //         border: OutlineInputBorder(),
+                        //         contentPadding: EdgeInsets.symmetric(
+                        //             horizontal: 10, vertical: 0),
+                        //       ),
+                        //     ),
+                        //   ),
+                        // ),
+                      ],
+                    ),
                   ),
 
                   Row(
@@ -713,7 +678,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                                   double disc = double.parse(txtDiscountBill.text.replaceAll(',', ''));
                                   //globals.discountBillDraft.discountNumber = globals.discountBillDraft.discountAmount;
                                   // globals.discountBillDraft.number = disc;
-                                  salesOrder.discountAmount = disc;
+                                  salesOrder.invdiscountamt = disc;
                                   FocusScope.of(context).unfocus();
                                 }
 
@@ -721,12 +686,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                                 bindingController();
                               },
                               onChanged: (text) {
-                                const duration = Duration(milliseconds: 1000); // set the duration that you want call search() after that.
-                                if (timer != null) {
-                                  setState(() => timer!.cancel()); // clear timer
-                                }
-
-                                timer = Timer(duration, () => setState(() {
+                                _debouncer.call(() {
                                   if(text.isEmpty) {
                                     SharedWidgets.showAlert(context, 'แจ้งเตือน', 'กรุณากรอกส่วนลด');
                                   }
@@ -762,19 +722,20 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
 
                                   } else if (salesOrder.discountType == 'PER') {
                                     // globals.discountBillDraft.number = double.tryParse(txtDiscountBill.text.replaceAll(',', ''));
-                                    salesOrder.discountAmount = double.tryParse(txtDiscountBill.text.replaceAll(',', ''));
+                                    salesOrder.invdiscountpct = double.tryParse(txtDiscountBill.text.replaceAll(',', ''));
                                     FocusScope.of(context).unfocus();
                                   } else if (salesOrder.discountType == 'THB') {
                                     double disc = double.parse(txtDiscountBill.text.replaceAll(',', ''));
                                     //globals.discountBillDraft.discountNumber = globals.discountBillDraft.discountAmount;
                                     // globals.discountBillDraft.number = disc;
-                                    salesOrder.discountAmount = disc;
+                                    salesOrder.invdiscountamt = disc;
                                     FocusScope.of(context).unfocus();
                                   }
 
-                                  totalSummary(salesOrder, myOrders);
+                                  Order order = totalSummary(salesOrder, myOrders);
+                                  ref.read(salesOrderDraft.notifier).edit(order.header);
                                   bindingController();
-                                }));
+                                });
                               },
                               decoration: const InputDecoration(
                                 labelText: 'ส่วนลดท้ายบิล',
@@ -786,70 +747,91 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                           ))
                     ],
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                          child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: TextFormField(
-                                readOnly: true,
-                                textAlign: TextAlign.right,
-                                controller: txtPriceAfterDiscount,
-                                decoration: const InputDecoration(
-                                  labelText: 'ยอดก่อนรวมภาษี',
-                                  border: OutlineInputBorder(),
-                                  contentPadding:
-                                  EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 0),
-                                ),
-                              )
-                          )
-                      )
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      children: [
+                        const Expanded(child: Text('ยอดก่อนรวมภาษี')),
+                        Expanded(child: Text(CURRENCY.format(salesOrder.aftrdiscountTotal), textAlign: TextAlign.right)),
+                        // Expanded(
+                        //     child: Padding(
+                        //         padding: const EdgeInsets.all(8.0),
+                        //         child: TextFormField(
+                        //           readOnly: true,
+                        //           textAlign: TextAlign.right,
+                        //           controller: txtPriceAfterDiscount,
+                        //           decoration: const InputDecoration(
+                        //             labelText: 'ยอดก่อนรวมภาษี',
+                        //             border: OutlineInputBorder(),
+                        //             contentPadding:
+                        //             EdgeInsets.symmetric(
+                        //                 horizontal: 10,
+                        //                 vertical: 0),
+                        //           ),
+                        //         )
+                        //     )
+                        // )
+                      ],
+                    ),
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                          child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: TextFormField(
-                                readOnly: true,
-                                textAlign: TextAlign.right,
-                                controller: txtVatTotal,
-                                decoration: const InputDecoration(
-                                  labelText: 'ภาษี 7%',
-                                  border: OutlineInputBorder(),
-                                  contentPadding:
-                                  EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 0),
-                                ),
-                              )
-                          )
-                      )
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      children: [
+                        const Expanded(child: Text('ภาษี 7%')),
+                        Expanded(child: Text(CURRENCY.format(salesOrder.vatamount), textAlign: TextAlign.right)),
+                        // Expanded(
+                        //     child: Padding(
+                        //         padding: const EdgeInsets.all(8.0),
+                        //         child: TextFormField(
+                        //           readOnly: true,
+                        //           textAlign: TextAlign.right,
+                        //           controller: txtVatTotal,
+                        //           decoration: const InputDecoration(
+                        //             labelText: 'ภาษี 7%',
+                        //             border: OutlineInputBorder(),
+                        //             contentPadding:
+                        //             EdgeInsets.symmetric(
+                        //                 horizontal: 10,
+                        //                 vertical: 0),
+                        //           ),
+                        //         )
+                        //     )
+                        // )
+                      ],
+                    ),
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: TextFormField(
-                              readOnly: true,
-                              textAlign: TextAlign.right,
-                              controller: txtNetTotal,
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                              decoration: const InputDecoration(
-                                labelText: 'รวมสุทธิ',
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 0),
-                              ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      children: [
+                        const Expanded(child: Text('ยอดสุทธิ', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold))),
+                        Expanded(
+                            child: Text(
+                                CURRENCY.format(salesOrder.grandtotal ?? 0),
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)
                             )
                         ),
-                      )
-                    ],
+                        // Expanded(
+                        //   child: Padding(
+                        //       padding: const EdgeInsets.all(8.0),
+                        //       child: TextFormField(
+                        //         readOnly: true,
+                        //         textAlign: TextAlign.right,
+                        //         controller: txtNetTotal,
+                        //         style: TextStyle(fontWeight: FontWeight.bold),
+                        //         decoration: const InputDecoration(
+                        //           labelText: 'รวมสุทธิ',
+                        //           border: OutlineInputBorder(),
+                        //           contentPadding: EdgeInsets.symmetric(
+                        //               horizontal: 10, vertical: 0),
+                        //         ),
+                        //       )
+                        //   ),
+                        // )
+                      ],
+                    ),
                   ),
 
                   Row(
@@ -861,11 +843,11 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                               height: 100,
                               padding: const EdgeInsets.only(top: 25, bottom: 25, left: 8.0, right: 5.0),
                               child: ElevatedButton.icon(
-                                icon: Icon(Icons.attach_file, size: 22),
-                                label: Text('แนบเอกสาร', style: TextStyle(fontSize: 14),),
+                                icon: const Icon(Icons.attach_file, size: 22),
+                                label: const Text('แนบเอกสาร', style: TextStyle(fontSize: 14),),
                                 style: ElevatedButton.styleFrom(
                                   primary: Colors.orange[600],
-                                  shape: RoundedRectangleBorder(
+                                  shape: const RoundedRectangleBorder(
                                       borderRadius: BorderRadius.all(Radius.circular(30.0))
                                   ),
                                 ),
@@ -895,11 +877,11 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                           height: 100,
                           padding: const EdgeInsets.only(top: 25, bottom: 25, left: 5.0, right: 8.0),
                           child: ElevatedButton.icon(
-                            label: Text(
+                            label: const Text(
                               'บันทึกฉบับร่าง',
                               style: TextStyle(fontSize: 14),
                             ),
-                            icon: Icon(Icons.save_alt, size: 22),
+                            icon: const Icon(Icons.save_alt, size: 22),
                             onPressed: () async {
                               var isConfirm = await orderValidation();
 
@@ -923,7 +905,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                             },
                             style: ElevatedButton.styleFrom(
                               primary: Colors.green,
-                              shape: RoundedRectangleBorder(
+                              shape: const RoundedRectangleBorder(
                                   borderRadius: BorderRadius.all(Radius.circular(30.0))
                               ),
                             ),
@@ -1015,16 +997,80 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
     );
   }
 
+  final _debouncer = Debouncer(delay: const Duration(milliseconds: 1000));
+  String runningNo = '';
+  String docuNo = '';
+  String refNo = '';
+  String custPONo = '';
+  String creditState = '';
+  double vat = 0.07;
+  // double priceTotal = 0;
+  // double discountTotal = 0;
+  // double discountBill = 0;
+  // double priceAfterDiscount = 0;
+  // double vatTotal = 0.0;
+  // double netTotal = 0.0;
+  // ApiService _apiService = new ApiService();
+  DateTime _docuDate = DateTime.now();
+  DateTime _shiptoDate = DateTime.now().add(const Duration(hours: 24));
+  DateTime _orderDate = DateTime.now();
+
+  List<Item> orderItems = <Item>[];
+  SalesQuote quotation = SalesQuote();
+  SalesOrder salesOrder = SalesOrder();
+  SalesShipment shipToAddress = SalesShipment();
+  List<SalesOrderLine> salesOrderLines = <SalesOrderLine>[];
+  late List<SalesOrderLine> myOrders = ref.watch(salesOrderLinesDraft);
+  // SoHeaderRemark headerRemark = SoHeaderRemark();
+  // List<SoDetailRemark> detailRemark = <SoDetailRemark>[];
+
+  FocusNode focusDiscount = FocusNode();
+  TextEditingController txtRunningNo = TextEditingController();
+  TextEditingController txtDocuNo = TextEditingController();
+  TextEditingController txtRefNo = TextEditingController();
+  TextEditingController txtCustPONo = TextEditingController();
+  TextEditingController txtSONo = TextEditingController();
+  TextEditingController txtQuotationNo = TextEditingController();
+  TextEditingController txtDeptCode = TextEditingController();
+  TextEditingController txtCopyDocuNo = TextEditingController();
+  TextEditingController txtEmpCode = TextEditingController();
+  TextEditingController txtEmpName = TextEditingController();
+  TextEditingController txtCustCode = TextEditingController();
+  TextEditingController txtCustName = TextEditingController();
+  TextEditingController txtCreditType = TextEditingController();
+  TextEditingController txtCredit = TextEditingController();
+  TextEditingController txtStatus = TextEditingController();
+  TextEditingController txtRemark = TextEditingController();
+
+  TextEditingController txtShiptoName = TextEditingController();
+  TextEditingController txtShiptoCode = TextEditingController();
+  TextEditingController txtShiptoProvince = TextEditingController();
+  TextEditingController txtShiptoAddress = TextEditingController();
+  TextEditingController txtShiptoRemark = TextEditingController();
+  TextEditingController txtPriceTotal = TextEditingController();
+  TextEditingController txtDiscountTotal = TextEditingController();
+  TextEditingController txtDiscountBill = TextEditingController();
+  TextEditingController txtPriceAfterDiscount = TextEditingController();
+  TextEditingController txtVatTotal = TextEditingController();
+  TextEditingController txtNetTotal = TextEditingController();
+
+  TextEditingController txtDocuDate = TextEditingController(
+      text: DATE_FORMAT.format(DateTime.now()));
+  TextEditingController txtShiptoDate = TextEditingController(
+      text: DATE_FORMAT.format(DateTime.now().add(const Duration(hours: 24))));
+  TextEditingController txtOrderDate = TextEditingController(
+      text: DATE_FORMAT.format(DateTime.now()));
+
   bindingController() {
     setState(() {
       double totalPrice = myOrders.fold(0, (previousValue, element) => previousValue.toDouble() + element.netAmount);
       txtPriceTotal.text = CURRENCY.format(totalPrice);
       // txtDiscountTotal.text = CURRENCY.format(discountTotal);
 
-      txtDiscountBill.text = CURRENCY.format(salesOrder.discountAmount);
+      txtDiscountBill.text = CURRENCY.format(salesOrder.invdiscountamt);
       // txtPriceAfterDiscount.text = CURRENCY.format(salesOrder.discountAppliedBeforeTax);
-      txtVatTotal.text = CURRENCY.format(salesOrder.totalTaxAmount);
-      txtNetTotal.text = CURRENCY.format(salesOrder.netAmount);
+      txtVatTotal.text = CURRENCY.format(salesOrder.vatamount);
+      txtNetTotal.text = CURRENCY.format(salesOrder.grandtotal);
     });
   }
 
@@ -1040,7 +1086,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
       return SharedWidgets.showAlert(context, 'โปรดเพิ่มรายการสินค้า', 'คุณยังไม่มีรายการสินค้า');
     }
 
-    if(!checkCredit(salesOrder.netAmount)) {
+    if(!checkCredit(salesOrder.grandtotal ?? 0)) {
       double limitAmount = CUSTOMER_FINANCIAL?.balance ?? 0;
       return SharedWidgets.showAlert(context, 'ยอดสั่งเกินวงเงินของลูกค้า', 'วงเงินของลูกค้าไม่เพียงพอในการสั่ง \n คงเหลือ = ${CURRENCY.format(limitAmount)}');
     }
@@ -1079,15 +1125,23 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 5.0),
                       child: Badge(
-                        toAnimate: false,
-                        shape: BadgeShape.square,
-                        badgeColor: flagFreeColor,
-                        borderRadius: BorderRadius.circular(15.0),
-                        badgeContent: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                          child: Text('สินค้า${e.unitPrice == 0 ? 'แถมฟรี' : 'เพื่อขาย'}', style: const TextStyle(color: Colors.white, fontSize: 12.0)),
-                        ),
+                        backgroundColor: flagFreeColor,
+                        textStyle: GoogleFonts.kanit(fontSize: 10),
+                        label: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                              child: Text(e.unitPrice == 0 ? 'แถมฟรี' : 'เพื่อขาย'),
+                        )
                       ),
+                      // child: Badge(
+                      //   toAnimate: false,
+                      //   shape: BadgeShape.square,
+                      //   badgeColor: flagFreeColor,
+                      //   borderRadius: BorderRadius.circular(15.0),
+                      //   badgeContent: Padding(
+                      //     padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                      //     child: Text('สินค้า${e.unitPrice == 0 ? 'แถมฟรี' : 'เพื่อขาย'}', style: const TextStyle(color: Colors.white, fontSize: 12.0)),
+                      //   ),
+                      // ),
                     ),
 
                     Text(' ${CURRENCY.format(e.quantity)} x $unitName', style: const TextStyle(fontSize: 14.0),),
@@ -1101,7 +1155,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
             children: [
               Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text('ส่วนลด ${e.discountType == 'PER' ? '${CURRENCY.format(e.discountPercent)}%' : CURRENCY.format(e.discountAmount)}', style: TextStyle(fontSize: 14.0),)
+                  child: Text('ส่วนลด ${e.discountType == 'PER' ? '${CURRENCY.format(e.discountPercent)}%' : CURRENCY.format(e.discountAmount)}', style: const TextStyle(fontSize: 14.0),)
               ),
               Row(
                 children: [
@@ -1174,7 +1228,7 @@ class _SalesOrderDraftPortraitState extends ConsumerState<SalesOrderDraftPortrai
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('บันทึกฉบับร่าง ?'),
-        content: const Text('คุณต้องการบันทึกฉบับร่างนี้หรือไม่ ?'),
+        content: const Text('ต้องการบันทึกฉบับร่างนี้หรือไม่ ?'),
         actions: <Widget>[
           TextButton(
             child: const Text('ไม่ต้องการ'),

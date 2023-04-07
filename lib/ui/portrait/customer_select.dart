@@ -1,30 +1,34 @@
 import 'dart:async';
 
 import 'package:dynamics_crm/config/global_constants.dart';
+import 'package:dynamics_crm/models/debounce.dart';
 import 'package:dynamics_crm/widgets/shared_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/customer.dart';
+import '../../providers/data_provider.dart';
 import '../customer_create.dart';
 import 'customer_detail.dart';
 import 'customer_edit_portrait.dart';
 
-class CustomerSelect extends StatefulWidget {
+class CustomerSelect extends ConsumerStatefulWidget {
   const CustomerSelect({super.key, this.lookNewCustomer = false, this.lookAll = true});
 
   final bool lookNewCustomer;
   final bool lookAll;
 
   @override
-  State<CustomerSelect> createState() => _CustomerSelectState();
+  _CustomerSelectState createState() => _CustomerSelectState();
 }
 
-class _CustomerSelectState extends State<CustomerSelect> {
+class _CustomerSelectState extends ConsumerState<CustomerSelect> {
   List<Customer> allCustomer = <Customer>[];
   List<Customer> tmpCustomer = <Customer>[];
 
   late Timer searchOnStoppedTyping;
+  final debouncer = Debouncer(delay: const Duration(milliseconds: 1000));
 
   ScrollController scroll = ScrollController();
   TextEditingController keyword = TextEditingController();
@@ -46,11 +50,7 @@ class _CustomerSelectState extends State<CustomerSelect> {
     //   Provider.of<ScrollVisible>(context, listen: false).setVisible(scroll.position.userScrollDirection == ScrollDirection.forward);
     // });
 
-    if(CUSTOMER != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await getScrollAtElement(tmpCustomer.indexWhere((x) => x.code == CUSTOMER!.code));
-      });
-    }
+    ref.read(myCustomerProvider);
   }
 
   getScrollAtElement(int index) async {
@@ -66,9 +66,16 @@ class _CustomerSelectState extends State<CustomerSelect> {
 
   @override
   Widget build(BuildContext context) {
+    Customer myCustomer = ref.watch(myCustomerProvider);
+    if(myCustomer != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await getScrollAtElement(tmpCustomer.indexWhere((x) => x.code == myCustomer!.code));
+      });
+    }
+
     return Scaffold(
         appBar: AppBar(
-          title: Text('ลูกค้าของคุณ'),
+          title: const Text('ลูกค้าของคุณ'),
           centerTitle: true,
           actions: [
             IconButton(
@@ -116,8 +123,8 @@ class _CustomerSelectState extends State<CustomerSelect> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(vertical: 5.0),
-                      child: Text('พบลูกค้า ${allCustomer.length} ราย', style: TextStyle(fontSize: 14.0),),
+                      padding: const EdgeInsets.symmetric(vertical: 5.0),
+                      child: Text('พบลูกค้า ${allCustomer.length} ราย', style: const TextStyle(fontSize: 14.0),),
                     ),
                   ],
                 ),
@@ -188,7 +195,6 @@ class _CustomerSelectState extends State<CustomerSelect> {
       switch(customer.blocked) {
         case 'I':
           return SharedWidgets.showAlert(context, 'In-Active Customer', 'ลูกค้ารายนี้อยู่ในสถานะที่ไม่พร้อมทำการซื้อขาย');
-          break;
         case 'H':
           return SharedWidgets.showAlert(context, 'Holding Customer', 'ลูกค้ารายนี้อยู่ในสถานะที่ไม่พร้อมทำการซื้อขาย');
       }
@@ -221,26 +227,29 @@ class _CustomerSelectState extends State<CustomerSelect> {
     }
     else {
       // globals.clearOrder();
-      CUSTOMER = customer;
+      // CUSTOMER = customer;
       SHIPMENT = shipTo;
+      // ref.read(myCustomerProvider.notifier).edit(customer);
       // globals.selectedShiptoQuot = shipTo;
-      print('Transport ID: ${SHIPMENT.id}');
+      // print('Transport ID: ${SHIPMENT.id}');
 
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString('customer', CUSTOMER?.id ?? '');
+      prefs.setString('customer', customer?.id ?? '');
 
-      Navigator.pop(context, CUSTOMER?.id ?? '');
+      Navigator.pop(context, customer);
     }
   }
 
-  myCustomerList(){
+  myCustomerList() {
+    Customer myCustomer = ref.watch(myCustomerProvider);
     return allCustomer.take(35).map((e) =>
         Container(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
           child: Card(
-            color: e == CUSTOMER ? Colors.grey.shade200 : Colors.white,
+            color: Colors.white,
+            // color: Colors.white,
             shape: RoundedRectangleBorder(
-              side: BorderSide(color: Colors.white70, width: 1),
+              side: BorderSide(color: e == myCustomer ? PRIMARY_COLOR : Colors.white70, width: 2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Container(
@@ -295,18 +304,19 @@ class _CustomerSelectState extends State<CustomerSelect> {
                             padding: const EdgeInsets.symmetric(vertical: 15.0),
                           ),
                           onPressed: () async {
-                            if(e.blocked == 'All') {
-                              var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => CustomerEditPortrait(customer: e)));
-                              if(res != null) {
-                                allCustomer = [];
-                                // globals.allCustomerNew = await ApiService().getCustomersNew();
-
-                                setState(() => setCustomer());
-                              }
-                            }
-                            else{
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => CustomerDetail(customer: e)));
-                            }
+                            await Navigator.push(context, MaterialPageRoute(builder: (context) => CustomerDetail(customer: e)));
+                            // if(e.blocked == 'All') {
+                            //   var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => CustomerEditPortrait(customer: e)));
+                            //   if(res != null) {
+                            //     allCustomer = [];
+                            //     // globals.allCustomerNew = await ApiService().getCustomersNew();
+                            //
+                            //     setState(() => setCustomer());
+                            //   }
+                            // }
+                            // else{
+                            //   Navigator.push(context, MaterialPageRoute(builder: (context) => CustomerDetail(customer: e)));
+                            // }
                           },
                         )
                     )
@@ -319,19 +329,26 @@ class _CustomerSelectState extends State<CustomerSelect> {
   }
 
   _onChangeHandler(String value) {
-    const duration = Duration(milliseconds:800); // set the duration that you want call search() after that.
-    if (searchOnStoppedTyping != null) {
-      setState(() => searchOnStoppedTyping.cancel()); // clear timer
-    }
+    debouncer.call(() {
+      allCustomer = tmpCustomer.where((x) => x.displayName!.toLowerCase().contains(value.toLowerCase())
+          || x.code!.toLowerCase().contains(value.toLowerCase())
+          || (x.state != null ? x.state!.contains(value) : false)
+          || (x.postalCode != null ? x.postalCode!.contains(value) : false)).toList();
+    });
 
-    searchOnStoppedTyping = Timer(
-        duration, () => setState(() => allCustomer = tmpCustomer
-        .where((x) => x.displayName!.toLowerCase().contains(value.toLowerCase())
-        || x.code!.toLowerCase().contains(value.toLowerCase())
-        // || (x.custAddr1 != null ? x.custAddr1.contains(value) : false)
-        || (x.state != null ? x.state!.contains(value) : false)
-        || (x.postalCode != null ? x.postalCode!.contains(value) : false)
-        // || (x.contTel != null ? x.contTel.contains(value) : false)
-    ).toList() ?? <Customer>[]));
+    // const duration = Duration(milliseconds:800); // set the duration that you want call search() after that.
+    // if (searchOnStoppedTyping != null) {
+    //   setState(() => searchOnStoppedTyping.cancel()); // clear timer
+    // }
+    //
+    // searchOnStoppedTyping = Timer(
+    //     duration, () => setState(() => allCustomer = tmpCustomer
+    //     .where((x) => x.displayName!.toLowerCase().contains(value.toLowerCase())
+    //     || x.code!.toLowerCase().contains(value.toLowerCase())
+    //     // || (x.custAddr1 != null ? x.custAddr1.contains(value) : false)
+    //     || (x.state != null ? x.state!.contains(value) : false)
+    //     || (x.postalCode != null ? x.postalCode!.contains(value) : false)
+    //     // || (x.contTel != null ? x.contTel.contains(value) : false)
+    // ).toList() ?? <Customer>[]));
   }
 }

@@ -104,12 +104,15 @@ class MyApp extends StatelessWidget {
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
 
-        // primarySwatch: PRIMARY_COLOR,
+        // primarySwatch: Color.fromRGBO(50, 54, 130, 1.0),
         primaryColor: PRIMARY_COLOR,
-        textTheme: GoogleFonts.sarabunTextTheme(Theme.of(context).textTheme),
+        accentColor: PRIMARY_COLOR,
+        // textTheme: GoogleFonts.sarabunTextTheme(Theme.of(context).textTheme),
+        // textTheme: GoogleFonts.kanitTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.kanitTextTheme(Theme.of(context).textTheme
+        ),
         appBarTheme: AppBarTheme(
-          // backgroundColor: Color.fromRGBO(50, 54, 130, 1.0),
-          elevation: 2,
+          elevation: 1,
           shadowColor: Colors.grey.shade50,
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           foregroundColor: const Color.fromRGBO(50, 54, 130, 1.0),

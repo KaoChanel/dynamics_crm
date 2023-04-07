@@ -1,4 +1,12 @@
 enum Activity {
+  total,
+  target,
+  topCustomer,
+  topProduct,
+  topProvince,
+  monthly,
+  quarterly,
+  yearly,
   order,
   draft,
   copy,
@@ -6,5 +14,5 @@ enum Activity {
   quotationDraft,
   quotationCopy,
   checkIn,
-  locationCollect
+  locationCollect,
 }

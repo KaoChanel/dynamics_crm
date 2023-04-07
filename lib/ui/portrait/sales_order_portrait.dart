@@ -15,16 +15,17 @@ import '../../models/dropdown.dart';
 import '../../models/sales_order.dart';
 import '../../services/api_service.dart';
 
-class SalesOrderListPortrait extends ConsumerStatefulWidget {
-  const SalesOrderListPortrait({Key? key}) : super(key: key);
+class SalesOrderPortrait extends ConsumerStatefulWidget {
+  const SalesOrderPortrait({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<SalesOrderListPortrait> createState() => _SalesOrderListPortraitState();
+  ConsumerState<SalesOrderPortrait> createState() => _SalesOrderPortraitState();
 }
 
-class _SalesOrderListPortraitState extends ConsumerState<SalesOrderListPortrait> {
+class _SalesOrderPortraitState extends ConsumerState<SalesOrderPortrait> {
   bool sort = true;
   bool isSearch = false;
+  Customer customer = Customer();
   List<SalesOrder> tempSOHD = [];
   SalesOrder selectedItem = SalesOrder();
   List<SalesOrder> selectedTempSOHD = [];
@@ -45,7 +46,8 @@ class _SalesOrderListPortraitState extends ConsumerState<SalesOrderListPortrait>
     // TODO: implement initState
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      orderList = await ApiService().getMyOrders(EMPLOYEE.code ?? '');
       setState(() {
         keyword = ref.watch(keywordOfSalesOrder);
         txtKeyword.text = keyword;
@@ -303,17 +305,17 @@ class _SalesOrderListPortraitState extends ConsumerState<SalesOrderListPortrait>
         itemCount: dataList.length,
         itemBuilder: (BuildContext context, int index) {
 
-          String customerCode = MY_CUSTOMERS.firstWhere((e) => e.id == dataList[index].customerId, orElse: () => Customer()).code ?? '';
+          String customerCode = MY_CUSTOMERS.firstWhere((e) => e.code == dataList[index].sellToCustomerNo, orElse: () => Customer()).code ?? '';
           String status = dataList[index].status == null ? ''
-              : dataList[index].status == 'RELEASE' ? 'รอดำเนินการ'
-              : dataList[index].status == 'OPEN' ? 'ฉบับร่าง'
-              : dataList[index].status == 'REJECT' ? 'ยกเลิกเอกสาร'
+              : dataList[index].status == 'Open' ? 'รอดำเนินการ'
+              : dataList[index].status == 'Draft' ? 'ฉบับร่าง'
+              : dataList[index].status == 'Pending' ? 'ยกเลิกเอกสาร'
               : 'เข้าระบบแล้ว';
 
           String docuDate = dataList[index].orderDate == null ? '' : DateFormat('dd/MM/yyyy').format(dataList[index].orderDate!);
-          String shipDate = dataList[index].requestedDeliveryDate == null ? '' : DateFormat('dd MMM yyyy').format(dataList[index].requestedDeliveryDate!);
-          Color? statusColor = dataList[index].status == 'RELEASE' ? Colors.orange[600]
-              : dataList[index].status == 'OPEN' ? Colors.blue
+          String shipDate = dataList[index].shipmentDate == null ? '' : DateFormat('dd MMM yyyy').format(dataList[index].shipmentDate!);
+          Color? statusColor = dataList[index].status == 'OPEN' ? Colors.orange[600]
+              : dataList[index].status == 'DRAFT' ? Colors.blue
               : dataList[index].status == 'C' ? Colors.red
               : Colors.green;
 
@@ -330,89 +332,88 @@ class _SalesOrderListPortraitState extends ConsumerState<SalesOrderListPortrait>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('${index + 1}. ${dataList[index].number}', style: TextStyle(
-                                fontSize: 14.0),),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                      vertical: 5.0, horizontal: 5.0),
-                                  child: Badge(
-                                      showBadge: true,
-                                      shape: BadgeShape.square,
-                                      borderRadius: BorderRadius.all(
-                                          Radius.circular(15.0)),
-                                      badgeColor: Colors.grey[300]!,
-                                      badgeContent: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 5.0),
-                                        child: RichText(
-                                            text: TextSpan(
-                                                children: [
-                                                  WidgetSpan(child: Icon(Icons
-                                                      .account_balance_wallet_outlined,
-                                                      size: 15.0,
-                                                      color: Colors.black54)),
-                                                  TextSpan(
-                                                      text: ' ${NumberFormat
-                                                          .decimalPattern()
-                                                          .format(
-                                                          dataList[index].netAmount ?? 0)}',
-                                                      style: TextStyle(
-                                                          fontSize: 11.0,
-                                                          fontWeight: FontWeight
-                                                              .bold,
-                                                          color: Colors
-                                                              .black54)),
-                                                ]
-                                            )
-                                        ),
-                                      ) //Text('${element.lastDocNo}', style: TextStyle(fontSize: 12.0),),
-                                  ),
-                                ),
-
-                                dataList[index].lastDocumentNumber != null
-                                    ? Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 5.0, horizontal: 5.0),
-                                  child: Badge(
-                                      showBadge: true,
-                                      shape: BadgeShape.square,
-                                      borderRadius: BorderRadius.all(
-                                          Radius.circular(15.0)),
-                                      badgeColor: Colors.grey[300]!,
-                                      badgeContent: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 5.0),
-                                        child: RichText(
-                                            text: TextSpan(
-                                                children: [
-                                                  WidgetSpan(child: Icon(
-                                                      Icons.description,
-                                                      size: 15.0,
-                                                      color: Colors.black54)),
-                                                  TextSpan(text: ' ${dataList[index].lastDocumentNumber}',
-                                                      style: TextStyle(
-                                                          fontSize: 10.0,
-                                                          fontWeight: FontWeight
-                                                              .bold,
-                                                          color: Colors
-                                                              .black54)),
-                                                ]
-                                            )
-                                        ),
-                                      ) //Text('${element.lastDocNo}', style: TextStyle(fontSize: 12.0),),
-                                  ),
-                                )
-                                    : Container()
-                              ],
-                            ),
+                            Text('${index + 1}. ${dataList[index].no}', style: const TextStyle(fontSize: 14.0),),
+                            // Row(
+                            //   children: [
+                            //     Container(
+                            //       padding: EdgeInsets.symmetric(
+                            //           vertical: 5.0, horizontal: 5.0),
+                            //       child: Badge(
+                            //           showBadge: true,
+                            //           shape: BadgeShape.square,
+                            //           borderRadius: BorderRadius.all(
+                            //               Radius.circular(15.0)),
+                            //           badgeColor: Colors.grey[300]!,
+                            //           badgeContent: Padding(
+                            //             padding: const EdgeInsets.symmetric(
+                            //                 horizontal: 5.0),
+                            //             child: RichText(
+                            //                 text: TextSpan(
+                            //                     children: [
+                            //                       WidgetSpan(child: Icon(Icons
+                            //                           .account_balance_wallet_outlined,
+                            //                           size: 15.0,
+                            //                           color: Colors.black54)),
+                            //                       TextSpan(
+                            //                           text: ' ${NumberFormat
+                            //                               .decimalPattern()
+                            //                               .format(
+                            //                               dataList[index].netAmount ?? 0)}',
+                            //                           style: TextStyle(
+                            //                               fontSize: 11.0,
+                            //                               fontWeight: FontWeight
+                            //                                   .bold,
+                            //                               color: Colors
+                            //                                   .black54)),
+                            //                     ]
+                            //                 )
+                            //             ),
+                            //           ) //Text('${element.lastDocNo}', style: TextStyle(fontSize: 12.0),),
+                            //       ),
+                            //     ),
+                            //
+                            //     dataList[index].lastDocumentNumber != null
+                            //         ? Container(
+                            //       padding: const EdgeInsets.symmetric(
+                            //           vertical: 5.0, horizontal: 5.0),
+                            //       child: Badge(
+                            //           showBadge: true,
+                            //           shape: BadgeShape.square,
+                            //           borderRadius: BorderRadius.all(
+                            //               Radius.circular(15.0)),
+                            //           badgeColor: Colors.grey[300]!,
+                            //           badgeContent: Padding(
+                            //             padding: const EdgeInsets.symmetric(
+                            //                 horizontal: 5.0),
+                            //             child: RichText(
+                            //                 text: TextSpan(
+                            //                     children: [
+                            //                       WidgetSpan(child: Icon(
+                            //                           Icons.description,
+                            //                           size: 15.0,
+                            //                           color: Colors.black54)),
+                            //                       TextSpan(text: ' ${dataList[index].lastDocumentNumber}',
+                            //                           style: TextStyle(
+                            //                               fontSize: 10.0,
+                            //                               fontWeight: FontWeight
+                            //                                   .bold,
+                            //                               color: Colors
+                            //                                   .black54)),
+                            //                     ]
+                            //                 )
+                            //             ),
+                            //           ) //Text('${element.lastDocNo}', style: TextStyle(fontSize: 12.0),),
+                            //       ),
+                            //     )
+                            //         : Container()
+                            //   ],
+                            // ),
                           ],
                         ),
                       )),
                   Expanded(
                       flex: 2,
-                      child: Text(docuDate, style: TextStyle(fontSize: 12.0),
+                      child: Text(docuDate, style: const TextStyle(fontSize: 12.0),
                           textAlign: TextAlign.right)
                   )
                 ],
@@ -426,8 +427,8 @@ class _SalesOrderListPortraitState extends ConsumerState<SalesOrderListPortrait>
                         flex: 5,
                         child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 5.0),
-                            child: Text('${dataList[index].customerName} ($customerCode)',
-                                style: TextStyle(fontSize: 14.0))
+                            child: Text('${dataList[index]} ($customerCode)',
+                                style: const TextStyle(fontSize: 14.0))
                         ),
                       ),
                       Expanded(
@@ -444,11 +445,13 @@ class _SalesOrderListPortraitState extends ConsumerState<SalesOrderListPortrait>
                     child: RichText(
                         text: TextSpan(
                             children: [
-                              WidgetSpan(child: Icon(Icons
+                              const WidgetSpan(child: Icon(Icons
                                   .local_shipping_outlined, size: 18.0,
                                   color: Colors.grey)),
-                              TextSpan(text: ' $shipDate', style: TextStyle(
-                                  color: Colors.grey, fontSize: 13.0)),
+                              TextSpan(
+                                  text: ' $shipDate',
+                                  style: const TextStyle(color: Colors.grey, fontSize: 13.0)
+                              ),
                             ]
                         )
                     ),
@@ -463,15 +466,17 @@ class _SalesOrderListPortraitState extends ConsumerState<SalesOrderListPortrait>
                 var res;
                 selectedItem = dataList[index];
 
-                if (selectedItem.status != 'OPEN') {
-                  if(selectedItem.lastDocumentNumber != null) {
-                    res = await openMenu();
-                  }
-                  else {
-                    res = await Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => SalesOrderViewPortrait(header: selectedItem))
-                    );
-                  }
+                if (selectedItem.status == 'OPEN') {
+                  // if(selectedItem.lastDocumentNumber != null) {
+                  //   res = await openMenu();
+                  // }
+                  // else {
+                  //   res = await Navigator.push(context,
+                  //       MaterialPageRoute(builder: (context) => SalesOrderViewPortrait(header: selectedItem))
+                  //   );
+                  // }
+
+                  res = await openMenu();
 
                   if (res != null) {
                     setState(() {});

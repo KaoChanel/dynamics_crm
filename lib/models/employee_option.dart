@@ -22,14 +22,14 @@ class EmployeeOption {
   });
 
   int? rowId;
-  String? empId;
+  int? empId;
   String? empCode;
   String? empName;
   String? emailAlertAppointment;
   DateTime? createDate;
-  String? createBy;
+  int? createBy;
   DateTime? updateDate;
-  String? updateBy;
+  int? updateBy;
 
   factory EmployeeOption.fromJson(Map<String, dynamic> json) => EmployeeOption(
     rowId: json["rowID"] == null ? null : json["rowID"],

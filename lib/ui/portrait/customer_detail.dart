@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:dynamics_crm/models/activity.dart';
+import 'package:dynamics_crm/ui/location_maps.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 // import 'package:ismart_crm/portrait_layouts/customer_location_portrait.dart';
@@ -29,12 +32,12 @@ class _CustomerDetailState extends State<CustomerDetail> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('รายละเอียด'),
+        title: const Text('รายละเอียด'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Container(
-          padding: EdgeInsets.all(15.0),
+          padding: const EdgeInsets.all(15.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -48,7 +51,7 @@ class _CustomerDetailState extends State<CustomerDetail> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: EdgeInsets.all(15.0),
+                      padding: const EdgeInsets.all(15.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -93,7 +96,7 @@ class _CustomerDetailState extends State<CustomerDetail> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            padding: EdgeInsets.all(15.0),
+                            padding: const EdgeInsets.all(15.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -127,10 +130,10 @@ class _CustomerDetailState extends State<CustomerDetail> {
         ),
       ),
       bottomNavigationBar: ElevatedButton.icon(
-        icon: const Icon(Icons.today_outlined, size: 30.0,),
-        label: const Text('นัดหมายลูกค้า', style: TextStyle(fontSize: 22.0),),
+        icon: const Icon(Icons.today_outlined, size: 25.0,),
+        label: const Text('นัดหมายลูกค้า', style: TextStyle(fontSize: 18.0),),
         style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 20.0)
+            padding: const EdgeInsets.symmetric(vertical: 15.0)
         ),
         onPressed: () async {
           if(CUSTOMER?.id != null || widget.customer != null) {
@@ -143,7 +146,7 @@ class _CustomerDetailState extends State<CustomerDetail> {
 
   customerInfo(String title, String text, TextAlign align) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 5.0),
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -156,7 +159,7 @@ class _CustomerDetailState extends State<CustomerDetail> {
 
   customerMenu() {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 15.0),
+      padding: const EdgeInsets.symmetric(vertical: 15.0),
       child: Row(
         children: [
           Expanded(
@@ -197,6 +200,14 @@ class _CustomerDetailState extends State<CustomerDetail> {
                     ],
                   ),
                   onPressed: () async {
+
+                    LatLng? res = await Navigator.push(context, MaterialPageRoute(builder: (context) => LocationMaps(activity: Activity.locationCollect, location: DEFAULT_LOCATION)));
+                    if(res != null){
+                      setState(() {
+                        widget.customer.latitude = res.latitude.toString();
+                        widget.customer.longitude = res.longitude.toString();
+                      });
+                    }
                     // if(globals.newcustomer_newcustid != '0'){
                     //   globals.newcustomer_newcustid = widget.customer?.id;
                     //

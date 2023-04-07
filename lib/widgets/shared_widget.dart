@@ -1,16 +1,24 @@
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import 'package:dynamics_crm/providers/data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:badges/badges.dart';
+// import 'package:badges/badges.dart';
 import 'package:dynamics_crm/models/sales_order.dart';
 import 'package:dynamics_crm/models/sales_order_line.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 import '../config/global_constants.dart';
 import '../models/activity.dart';
 import '../models/item.dart';
+import '../models/remark.dart';
+import '../models/sales_quote_line.dart';
 import '../ui/location_maps.dart';
+import '../ui/portrait/item_edit_portrait.dart';
 
 class SharedWidgets {
   // static Widget buildAppBar({String? title}) {
@@ -31,9 +39,9 @@ class SharedWidgets {
 
   static Widget discountType(String discountType) {
     if (discountType == 'THB') {
-      return const Text('THB');
+      return Text('THB');
     } else {
-      return const Text('%');
+      return Text('%');
     }
   }
 
@@ -82,39 +90,41 @@ class SharedWidgets {
     //       ),
     // );
 
-    AlertDialog alert = AlertDialog(
-      content: Container(
-        height: 120,
-        child: Column(
-          children: [
-            SizedBox(
-                width: 60,
-                height: 60,
-                child: CircularProgressIndicator(
-                  strokeWidth: 7.0,
-                )
-            ),
-            Container(
-              // margin: EdgeInsets.only(left: 7),
-                padding: const EdgeInsets.only(top: 25.0),
-                child: const Text('กำลังโหลด', style: TextStyle(fontSize: 18.0))
-            ),
-          ],),
-      ),
-    );
-
     await showDialog(
       barrierDismissible: dismiss,
       context: context,
       builder: (BuildContext context) {
-        if(dismiss == false){
-          return WillPopScope(
-              child: alert,
-              onWillPop: () async => false);
-        }
-        else {
-          return alert;
-        }
+        return Consumer(builder: (context, ref, _) {
+          AlertDialog alert = AlertDialog(
+            content: SizedBox(
+              height: 120,
+              child: Column(
+                children: [
+                  const SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 7.0,
+                      )
+                  ),
+                  Container(
+                    // margin: EdgeInsets.only(left: 7),
+                      padding: const EdgeInsets.only(top: 25.0),
+                      child: Text(ref.watch(loadingMessage), style: const TextStyle(fontSize: 18.0))
+                  ),
+                ],),
+            ),
+          );
+
+          if(dismiss == false){
+            return WillPopScope(
+                child: alert,
+                onWillPop: () async => false);
+          }
+          else {
+            return alert;
+          }
+        });
       },
     );
   }
@@ -141,6 +151,35 @@ class SharedWidgets {
               ]
           );
         }
+    );
+  }
+
+  static showRemark(BuildContext context, List<Remark> allRemarks) async {
+    List<ListTile> tiles = [];
+
+    for (var obj in allRemarks) {
+      tiles.add(ListTile(
+        title: Text(obj.remark ?? ''),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0),
+        onTap: () => Navigator.pop(context, obj)
+      ));
+    }
+
+    var alert = AlertDialog(
+        elevation: 0,
+        title: const Text('ข้อความ'),
+        content: Container(
+            width: 500,
+            height: 300,
+            child: ListView(children: tiles)
+        )
+    );
+
+    return await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
     );
   }
 
@@ -185,11 +224,14 @@ class SharedWidgets {
                         Container(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
                           child: Badge(
-                            shape: BadgeShape.square,
-                            borderRadius: const BorderRadius.all(Radius.circular(20.0)),
-                            badgeColor: Colors.grey[300]!,
-                            // badgeContent: Text(' ${e.inveName}', style: TextStyle(fontSize: 11.0, fontWeight: FontWeight.bold, color: Colors.black54)),
+                            backgroundColor: Colors.grey[300]!,
                           ),
+                          // child: Badge(
+                          //   shape: BadgeShape.square,
+                          //   borderRadius: const BorderRadius.all(Radius.circular(20.0)),
+                          //   badgeColor: Colors.grey[300]!,
+                          //   // badgeContent: Text(' ${e.inveName}', style: TextStyle(fontSize: 11.0, fontWeight: FontWeight.bold, color: Colors.black54)),
+                          // ),
                         ),
                         // Text('Lot No. ${e.lotNo}', style: TextStyle(fontSize: 14.0)),
                       ],
@@ -233,12 +275,15 @@ class SharedWidgets {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Badge(
-                            shape: BadgeShape.square,
-                            badgeColor: Colors.lightBlue[300]!,
-                            padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
-                            borderRadius: const BorderRadius.all(Radius.circular(5.0)),
-                            badgeContent: const Text('จองไปแล้ว', style: TextStyle(color: Colors.white),),
+
                           ),
+                          // Badge(
+                          //   shape: BadgeShape.square,
+                          //   badgeColor: Colors.lightBlue[300]!,
+                          //   padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+                          //   borderRadius: const BorderRadius.all(Radius.circular(5.0)),
+                          //   badgeContent: const Text('จองไปแล้ว', style: TextStyle(color: Colors.white),),
+                          // ),
                           Text(numberFormat.format(goodRemainQty))
                         ],
                       ),
@@ -456,6 +501,21 @@ class SharedWidgets {
     );
   }
 
+  static launchInBrowser(String url) async {
+    Uri uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        // forceSafariVC: false,
+        // forceWebView: false,
+        // headers: <String, String>{'my_header_key': 'my_header_value'},
+      );
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
   static miniMap(BuildContext context, LatLng myLocation) {
     late GoogleMapController mapController;
     Marker myMarkers = Marker(
@@ -486,6 +546,279 @@ class SharedWidgets {
           myLocation = res;
         }
       },
+    );
+  }
+
+  static Widget inlineInfo(String leading, String message, [String trailing = '']) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          leading.isEmpty ? const Text('') : Expanded(flex: 1,child: Text('$leading ', style: GREY_STYLE,),),
+          Expanded(child: Text('$message $trailing')),
+        ],
+      ),
+    );
+  }
+
+  static showAwesomeSnackBar(BuildContext context, ContentType type, String title, String message) async {
+    final snackBar = SnackBar(
+      /// need to set following properties for best effect of awesome_snackbar_content
+      elevation: 0,
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Colors.transparent,
+      // margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.30),
+      content: AwesomeSnackbarContent(
+        title: title,
+        message: message,
+
+        /// change contentType to ContentType.success, ContentType.warning or ContentType.help for variants
+        contentType: type,
+      ),
+    );
+
+    return ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(snackBar);
+  }
+
+  static showAwesomeMaterial(BuildContext context, ContentType type, String title, String message) async {
+    final materialBanner = MaterialBanner(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      forceActionsBelow: true,
+      content: AwesomeSnackbarContent(
+        title: title,
+        message: message,
+        contentType: type,
+        // to configure for material banner
+        inMaterialBanner: true,
+      ),
+      actions: const [SizedBox.shrink()],
+    );
+
+    return ScaffoldMessenger.of(context)
+      ..hideCurrentMaterialBanner()
+      ..showMaterialBanner(materialBanner);
+  }
+
+  static saleQuoteDetail(BuildContext context, List<SalesQuoteLine> orders) {
+    return ListView(
+      primary: false,
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+
+      children: orders.map((e) {
+
+        String goodsCode = ITEMS.firstWhere((item) => item.id == e.itemId).code ?? '';
+        String goodsName = ITEMS.firstWhere((item) => item.id == e.itemId).displayName ?? '';
+        String unitName = UNITS.firstWhere((unit) => unit.id == e.unitOfMeasureId).displayName ?? '';
+
+        Color flagFreeColor = e.unitPrice == 0 ? Colors.lightGreen : Colors.orangeAccent;
+
+        return ListTile(
+          title: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${e.sequence}. ($goodsCode) $goodsName', style: const TextStyle(fontSize: 14.0),),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 5.0),
+                      child: Badge(
+                        // toAnimate: false,
+                        // shape: BadgeShape.square,
+                        backgroundColor: flagFreeColor,
+                        // borderRadius: BorderRadius.circular(15.0),
+                        label: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                          child: Text('สินค้า${e.unitPrice == 0 ? 'แถมฟรี' : 'เพื่อขาย'}', style: const TextStyle(color: Colors.white, fontSize: 12.0)),
+                        ),
+                      ),
+                    ),
+
+                    Text(' ${CURRENCY.format(e.quantity)} x $unitName', style: const TextStyle(fontSize: 14.0),),
+                  ],
+                )
+              ],
+            ),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text('ส่วนลด ${e.discountType == 'PER' ? '${CURRENCY.format(e.discountAmount)}%' : CURRENCY.format(e.discountAmount)}', style: const TextStyle(fontSize: 14.0),)
+              ),
+              Row(
+                children: [
+                  TextButton(
+                    child: const Text('แก้ไข'),
+                    onPressed: () async {
+                      var res = await Navigator.push(context,
+                          MaterialPageRoute(
+                              builder: (context) => ItemEditPortrait(editItem: toSalesOrderLineSingle(quote: e))
+                          )
+                      );
+
+                      if(res != null) {
+                        // if(res == 'Remove') {
+                        //   globals.productCartQuot.removeWhere((x) => x.rowIndex == e.sequence);
+                        //
+                        //   /// Re-Index
+                        //   int row = 1;
+                        //   globals.productCartQuot.forEach((x) => x.rowIndex = row++);
+                        // }
+                        // else{
+                        //   globals.productCartQuot[globals.productCartQuot.indexWhere((x) => x.rowIndex == e.rowIndex)] = res;
+                        // }
+                      }
+                    },
+                  ),
+
+                  TextButton(
+                      onPressed: (){
+                        int index = 1;
+                        // globals.productCartQuot.removeWhere(
+                        //         (element) => element.rowIndex == e.rowIndex);
+                        // globals.productCartQuot.forEach((element) {
+                        //   element.rowIndex = index++;
+                        // });
+                        // globals.editingProductCart = null;
+                        // print(globals.productCartQuot?.length.toString());
+                      },
+                      child: const Text('ลบรายการ')
+                  )
+                ],
+              )
+              // Expanded(
+              //     child: Text('฿ ${currency.format(e.goodAmnt)}', textAlign: TextAlign.right,)
+              // )
+            ],
+          ),
+          trailing: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(CURRENCY.format(e.unitPrice)),
+              Text(CURRENCY.format(e.netAmount), style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.normal),),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  static saleOrderDetail(BuildContext context, List<SalesOrderLine> orders) {
+    return ListView(
+      primary: false,
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+
+      children: orders.map((e) {
+
+        String goodsCode = ITEMS.firstWhere((item) => item.id == e.itemId).code ?? '';
+        String goodsName = ITEMS.firstWhere((item) => item.id == e.itemId).displayName ?? '';
+        String unitName = UNITS.firstWhere((unit) => unit.id == e.unitOfMeasureId).displayName ?? '';
+
+        Color flagFreeColor = e.unitPrice == 0 ? Colors.lightGreen : Colors.orangeAccent;
+
+        return ListTile(
+          title: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${e.sequence}. ($goodsCode) $goodsName', style: const TextStyle(fontSize: 14.0),),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 5.0),
+                      child: Badge(
+                        // toAnimate: false,
+                        // shape: BadgeShape.square,
+                        backgroundColor: flagFreeColor,
+                        // borderRadius: BorderRadius.circular(15.0),
+                        label: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                          child: Text('สินค้า${e.unitPrice == 0 ? 'แถมฟรี' : 'เพื่อขาย'}', style: const TextStyle(color: Colors.white, fontSize: 12.0)),
+                        ),
+                      ),
+                    ),
+
+                    Text(' ${CURRENCY.format(e.quantity)} x $unitName', style: const TextStyle(fontSize: 14.0),),
+                  ],
+                )
+              ],
+            ),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text('ส่วนลด ${e.discountType == 'PER' ? '${CURRENCY.format(e.discountAmount)}%' : CURRENCY.format(e.discountAmount)}', style: const TextStyle(fontSize: 14.0),)
+              ),
+              Row(
+                children: [
+                  TextButton(
+                    child: const Text('แก้ไข'),
+                    onPressed: () async {
+                      var res = await Navigator.push(context,
+                          MaterialPageRoute(
+                              builder: (context) => ItemEditPortrait(editItem: e)
+                          )
+                      );
+
+                      if(res != null) {
+                        // if(res == 'Remove') {
+                        //   globals.productCartQuot.removeWhere((x) => x.rowIndex == e.sequence);
+                        //
+                        //   /// Re-Index
+                        //   int row = 1;
+                        //   globals.productCartQuot.forEach((x) => x.rowIndex = row++);
+                        // }
+                        // else{
+                        //   globals.productCartQuot[globals.productCartQuot.indexWhere((x) => x.rowIndex == e.rowIndex)] = res;
+                        // }
+                      }
+                    },
+                  ),
+
+                  TextButton(
+                      onPressed: (){
+                        int index = 1;
+                        // globals.productCartQuot.removeWhere(
+                        //         (element) => element.rowIndex == e.rowIndex);
+                        // globals.productCartQuot.forEach((element) {
+                        //   element.rowIndex = index++;
+                        // });
+                        // globals.editingProductCart = null;
+                        // print(globals.productCartQuot?.length.toString());
+                      },
+                      child: const Text('ลบรายการ')
+                  )
+                ],
+              )
+              // Expanded(
+              //     child: Text('฿ ${currency.format(e.goodAmnt)}', textAlign: TextAlign.right,)
+              // )
+            ],
+          ),
+          trailing: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(CURRENCY.format(e.unitPrice)),
+              Text(CURRENCY.format(e.netAmount), style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.normal),),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 SalesQuoteLine salesQuoteLineFromJson(String str) => SalesQuoteLine.fromJson(json.decode(str));
@@ -14,6 +15,7 @@ String salesQuoteLineToJson(List<SalesQuoteLine> data) => json.encode(List<dynam
 
 class SalesQuoteLine {
   SalesQuoteLine({
+    this.key,
     this.id,
     this.documentId,
     this.sequence,
@@ -26,23 +28,27 @@ class SalesQuoteLine {
     this.unitOfMeasureCode,
     this.unitPrice,
     this.quantity,
+    this.discountType,
     this.discountAmount,
-    this.discountPercent,
+    this.discount,
     this.discountAppliedBeforeTax,
-    this.amountExcludingTax,
     this.taxCode,
     this.taxPercent,
     this.totalTaxAmount,
     this.amountIncludingTax,
-    this.netAmount,
+    this.amountExcludingTax,
+    this.netAmount = 0,
     this.netTaxAmount,
     this.netAmountIncludingTax,
     this.itemVariantId,
+    this.isFree = false,
+    this.isSelect = false
   });
 
+  GlobalKey? key;
   String? id;
   String? documentId;
-  String? sequence;
+  int? sequence;
   String? itemId;
   String? accountId;
   String? lineType;
@@ -50,25 +56,28 @@ class SalesQuoteLine {
   String? description;
   String? unitOfMeasureId;
   String? unitOfMeasureCode;
-  String? unitPrice;
-  String? quantity;
-  String? discountAmount;
-  String? discountPercent;
+  double? unitPrice;
+  double? quantity;
+  String? discountType;
+  double? discountAmount;
+  double? discount;
   String? discountAppliedBeforeTax;
-  String? amountExcludingTax;
   String? taxCode;
   String? taxPercent;
-  String? totalTaxAmount;
-  String? amountIncludingTax;
-  String? netAmount;
-  String? netTaxAmount;
-  String? netAmountIncludingTax;
+  double? totalTaxAmount;
+  double? amountIncludingTax;
+  double? amountExcludingTax;
+  double netAmount;
+  double? netTaxAmount;
+  double? netAmountIncludingTax;
   String? itemVariantId;
+  bool isFree = false;
+  bool isSelect = false;
 
   SalesQuoteLine copyWith({
     String? id,
     String? documentId,
-    String? sequence,
+    int? sequence,
     String? itemId,
     String? accountId,
     String? lineType,
@@ -76,19 +85,20 @@ class SalesQuoteLine {
     String? description,
     String? unitOfMeasureId,
     String? unitOfMeasureCode,
-    String? unitPrice,
-    String? quantity,
-    String? discountAmount,
-    String? discountPercent,
+    double? unitPrice,
+    double? quantity,
+    String? discountType = 'PER',
+    double? discountAmount,
+    double? discount,
     String? discountAppliedBeforeTax,
-    String? amountExcludingTax,
     String? taxCode,
     String? taxPercent,
-    String? totalTaxAmount,
-    String? amountIncludingTax,
-    String? netAmount,
-    String? netTaxAmount,
-    String? netAmountIncludingTax,
+    double? totalTaxAmount,
+    double? amountIncludingTax,
+    double? amountExcludingTax,
+    double? netAmount,
+    double? netTaxAmount,
+    double? netAmountIncludingTax,
     String? itemVariantId,
   }) =>
       SalesQuoteLine(
@@ -105,7 +115,7 @@ class SalesQuoteLine {
         unitPrice: unitPrice ?? this.unitPrice,
         quantity: quantity ?? this.quantity,
         discountAmount: discountAmount ?? this.discountAmount,
-        discountPercent: discountPercent ?? this.discountPercent,
+        discount: discount ?? this.discount,
         discountAppliedBeforeTax: discountAppliedBeforeTax ?? this.discountAppliedBeforeTax,
         amountExcludingTax: amountExcludingTax ?? this.amountExcludingTax,
         taxCode: taxCode ?? this.taxCode,
@@ -132,7 +142,7 @@ class SalesQuoteLine {
     unitPrice: json["unitPrice"] == null ? null : json["unitPrice"],
     quantity: json["quantity"] == null ? null : json["quantity"],
     discountAmount: json["discountAmount"] == null ? null : json["discountAmount"],
-    discountPercent: json["discountPercent"] == null ? null : json["discountPercent"],
+    discount: json["discount"] == null ? null : json["discount"],
     discountAppliedBeforeTax: json["discountAppliedBeforeTax"] == null ? null : json["discountAppliedBeforeTax"],
     amountExcludingTax: json["amountExcludingTax"] == null ? null : json["amountExcludingTax"],
     taxCode: json["taxCode"] == null ? null : json["taxCode"],
@@ -159,7 +169,7 @@ class SalesQuoteLine {
     "unitPrice": unitPrice == null ? null : unitPrice,
     "quantity": quantity == null ? null : quantity,
     "discountAmount": discountAmount == null ? null : discountAmount,
-    "discountPercent": discountPercent == null ? null : discountPercent,
+    "discount": discount == null ? null : discount,
     "discountAppliedBeforeTax": discountAppliedBeforeTax == null ? null : discountAppliedBeforeTax,
     "amountExcludingTax": amountExcludingTax == null ? null : amountExcludingTax,
     "taxCode": taxCode == null ? null : taxCode,

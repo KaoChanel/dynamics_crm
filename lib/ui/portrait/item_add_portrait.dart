@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dynamics_crm/models/sales_quote_line.dart';
 import 'package:dynamics_crm/widgets/shared_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamics_crm/config/global_constants.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dynamics_crm/providers/data_provider.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/debounce.dart';
 import '../../models/item.dart';
 import '../../models/sales_order_line.dart';
 
@@ -25,7 +27,6 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
   double firstPrice = 0;
   bool inStock = true;
   bool isPercent = true;
-  NumberFormat currency = NumberFormat('#,##0.00', 'en_US');
   NumberFormat quantityFormat = NumberFormat('#,###', 'en_US');
   // ProductCart productCart = ProductCart();
   TextEditingController txtQty = TextEditingController();
@@ -36,6 +37,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
 
   Timer? searchOnStoppedTyping;
   bool _longPressCanceled = false;
+  final debouncer = Debouncer(delay: const Duration(milliseconds: 1000));
 
   late List<Item> allItems = ref.read(itemsCart);
   late List<SalesOrderLine> myOrders = ref.watch(salesOrderLines);
@@ -47,7 +49,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
     super.initState();
 
     orderItem.unitPrice = widget.selectedItem.unitPrice;
-    amountCalculate();
+    amountCalculate(isPercent, txtDiscount.text, orderItem);
     bindingController();
   }
 
@@ -77,15 +79,15 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-                  child: Text(widget.selectedItem?.code ?? '', style: TextStyle(fontSize: 14.0)),
+                  child: Text(widget.selectedItem?.no ?? '', style: const TextStyle(fontSize: 14.0)),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                  child: Text(widget.selectedItem?.displayName ?? '', style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold)),
+                  child: Text(widget.selectedItem?.description ?? '', style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold)),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-                  child: Text('${currency.format(widget.selectedItem?.unitPrice)} / ${widget.selectedItem?.baseUnitOfMeasureCode ?? ''}', style: TextStyle(fontSize: 14.0)),
+                  child: Text('${CURRENCY.format(widget.selectedItem?.unitPrice ?? 0)} / ${widget.selectedItem?.baseuomdescription ?? ''}', style: const TextStyle(fontSize: 14.0)),
                 ),
                 SizedBox(
                   height: 0,
@@ -96,8 +98,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       ElevatedButton(
-                        child: inStock ? Text('เช็คสต๊อค') : Text('ไม่มีของ'),
-                        onPressed: !inStock ? null : () async {
+                        onPressed: (widget.selectedItem.inventory ?? 0) <= 0 ? null : () async {
                           FocusScope.of(context).unfocus();
                           if (widget.selectedItem == null) {
                             return await showDialog(
@@ -109,6 +110,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                             SharedWidgets.showStock(context, widget.selectedItem.id!);
                           }
                         },
+                        child: (widget.selectedItem.inventory ?? 0) > 0 ? const Text('เช็คสต๊อค') : const Text('ไม่มีสินค้า'),
                       ),
                     ],
                   ),
@@ -119,8 +121,8 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                     readOnly: canEditPrice(),
                     textAlign: TextAlign.right,
                     controller: txtPrice,
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
-                    style: TextStyle(fontSize: 14.0),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: const TextStyle(fontSize: 14.0),
                     decoration: const InputDecoration(
                       labelText: 'ราคา / หน่วย',
                       hintText: 'ราคาขาย',
@@ -137,7 +139,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                     readOnly: true,
                     controller: txtTotal,
                     textAlign: TextAlign.right,
-                    style: TextStyle(fontSize: 14.0),
+                    style: const TextStyle(fontSize: 14.0),
                     decoration: const InputDecoration(
                       labelText: 'รวมราคา',
                       hintText: 'รวมราคา',
@@ -166,7 +168,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                               orderItem.discountType = 'THB';
                             }
 
-                            amountCalculate();
+                            amountCalculate(isPercent, txtDiscount.text, orderItem);
                             bindingController();
                           },
                         ),
@@ -215,9 +217,9 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                       double? price = double.tryParse(txtPrice.text.replaceAll(',', ''));
 
                       if(value == false){
-                        txtPrice.text = currency.format(firstPrice);
+                        txtPrice.text = CURRENCY.format(firstPrice);
                         if(newPrice > 0){
-                          txtPrice.text = currency.format(newPrice);
+                          txtPrice.text = CURRENCY.format(newPrice);
                         }
 
                         if(price != null){
@@ -233,7 +235,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                         orderItem.unitPrice = widget.selectedItem.unitPrice;
                       }
 
-                      amountCalculate();
+                      amountCalculate(isPercent, txtDiscount.text, orderItem);
                       bindingController();
                     },
                   ),
@@ -271,7 +273,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                                 }
                               }
 
-                              amountCalculate();
+                              amountCalculate(isPercent, txtDiscount.text, orderItem);
                               bindingController();
                             },
                             child: Icon(Icons.remove, color: Theme.of(context).primaryColor, size: 24.0,),
@@ -287,7 +289,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                                     orderItem.quantity = orderItem.quantity! - 1;
                                   }
 
-                                  amountCalculate();
+                                  amountCalculate(isPercent, txtDiscount.text, orderItem);
                                   bindingController();
                                 });
                               }
@@ -340,7 +342,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                                 primary: Colors.white,
                                 alignment: Alignment.center,
                                 side: BorderSide(width: 1.0, color: Theme.of(context).primaryColor),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(50.0)))
+                                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(50.0)))
                             ),
                             onPressed: () async {
                               FocusScope.of(context).unfocus();
@@ -356,7 +358,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                                 Navigator.pop(context);
                               }
 
-                              amountCalculate();
+                              amountCalculate(isPercent, txtDiscount.text, orderItem);
                               bindingController();
                             },
                           ),
@@ -368,7 +370,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                                   FocusScope.of(context).unfocus();
 
                                   orderItem.quantity = orderItem.quantity! + 1;
-                                  amountCalculate();
+                                  amountCalculate(isPercent, txtDiscount.text, orderItem);
                                   bindingController();
 
                                 });
@@ -410,7 +412,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('รวมสุทธิ', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),),
-                  Text(currency.format(orderItem.netAmount ?? 0), style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),)
+                  Text(CURRENCY.format(orderItem.netAmount ?? 0), style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),)
                 ],
               ),
             ),
@@ -437,24 +439,13 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
   //       globals.customer.custId, widget.selectedProduct?.goodCode, productCart.goodQty, widget.selectedProduct?.saleGoodUnitId ?? widget.selectedProduct?.mainGoodUnitId);
   // }
 
-  amountCalculate() {
-    if(orderItem.isFree) {
-      orderItem.unitPrice = 0;
-      newPrice = 0;
-    }
-
-    orderItem.amountBeforeDiscount = orderItem.quantity! * orderItem.unitPrice!;
-    orderItem = discountCalculate(isPercent, txtDiscount.text, orderItem);
-    orderItem.netAmount = orderItem.amountBeforeDiscount! - orderItem.discountAmount!;
-  }
-
   bindingController() {
     if(!mounted) return;
     setState(() {
       txtQty.text = quantityFormat.format(orderItem.quantity);
-      txtPrice.text = NumberFormat('#,###.##').format(orderItem.unitPrice);
+      txtPrice.text = NumberFormat('#,###.##').format(orderItem.unitPrice ?? 0);
 
-      txtTotal.text = currency.format(orderItem.amountBeforeDiscount);
+      txtTotal.text = CURRENCY.format(orderItem.amountBeforeDiscount);
       txtDiscount.text = NumberFormat('#,###.##').format(orderItem.discountType == 'PER' ? orderItem.discountPercent : orderItem.discountAmount);
 
       txtQty.selection = TextSelection.fromPosition(TextPosition(offset: txtQty.text.length));
@@ -544,9 +535,32 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
     orderItem.id = UniqueKey().toString();
     orderItem.sequence = myOrders.length + 1;
     orderItem.itemId = widget.selectedItem.id;
-    orderItem.unitOfMeasureId = widget.selectedItem.baseUnitOfMeasureId;
-    orderItem.unitOfMeasureCode = widget.selectedItem.baseUnitOfMeasureCode;
-    ref.watch(salesOrderLines.notifier).add(orderItem);
+    orderItem.unitOfMeasureId = widget.selectedItem.baseUnitOfMeasure;
+    orderItem.unitOfMeasureCode = widget.selectedItem.baseuomdescription;
+
+    switch(widget.type){
+      case Activity.order:
+        ref.read(salesOrderLines.notifier).add(orderItem);
+        break;
+      case Activity.draft:
+        ref.read(salesOrderLinesDraft.notifier).add(orderItem);
+        break;
+      case Activity.copy:
+        ref.read(salesOrderLinesCopy.notifier).add(orderItem);
+        break;
+      case Activity.quotation:
+        SalesQuoteLine itemQuote = toSalesQuote(orderItem);
+        ref.read(salesQuoteLines.notifier).add(itemQuote);
+        break;
+      case Activity.quotationDraft:
+        SalesQuoteLine itemQuote = toSalesQuote(orderItem);
+        ref.read(salesQuoteLinesDraft.notifier).add(itemQuote);
+        break;
+      case Activity.quotationCopy:
+        SalesQuoteLine itemQuote = toSalesQuote(orderItem);
+        ref.read(salesQuoteLinesCopy.notifier).add(itemQuote);
+        break;
+    }
 
     Navigator.pop(context);
     Navigator.pop(context, orderItem);
@@ -565,7 +579,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
       // orderItem.unitPrice = await getPrice();
     }
 
-    amountCalculate();
+    amountCalculate(isPercent, txtDiscount.text, orderItem);
     bindingController();
   }
 
@@ -588,7 +602,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
         txtQty.text = value;
       }
 
-      amountCalculate();
+      amountCalculate(isPercent, txtDiscount.text, orderItem);
       bindingController();
     });
   }
@@ -608,7 +622,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
         txtPrice.text = value;
       }
 
-      amountCalculate();
+      amountCalculate(isPercent, txtDiscount.text, orderItem);
       bindingController();
     });
   }
@@ -630,7 +644,7 @@ class _ItemAddPortraitState extends ConsumerState<ItemAddPortrait> {
         txtDiscount.text = value;
       }
 
-      amountCalculate();
+      amountCalculate(isPercent, txtDiscount.text, orderItem);
       bindingController();
     });
   }

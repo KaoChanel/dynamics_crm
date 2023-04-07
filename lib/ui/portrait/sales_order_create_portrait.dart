@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dynamics_crm/models/debounce.dart';
 import 'package:dynamics_crm/models/unit.dart';
 import 'package:flutter/material.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
-import 'package:badges/badges.dart';
+// import 'package:badges/badges.dart';
 import 'package:dynamics_crm/config/global_constants.dart';
 import 'package:dynamics_crm/models/sales_order_line.dart';
 import 'package:dynamics_crm/widgets/shared_widget.dart';
@@ -12,17 +13,23 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dynamics_crm/providers/data_provider.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
 import 'package:quickalert/models/quickalert_type.dart';
 import 'package:quickalert/widgets/quickalert_dialog.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../models/activity.dart';
+import '../../models/customer.dart';
 import '../../models/item.dart';
+import '../../models/order.dart';
+import '../../models/remark.dart';
 import '../../models/sales_order.dart';
 import '../../models/task_event.dart';
 import '../../services/api_service.dart';
 import '../attachment_manager.dart';
+import 'item_add_express_portrait.dart';
 import 'item_edit_portrait.dart';
 import 'item_select.dart';
 
@@ -51,8 +58,12 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
   double priceAfterDiscount = 0;
   double vatTotal = 0.0;
   double netTotal = 0.0;
-  late SalesOrder myOrderHeader = ref.watch(salesOrder);
-  late List<SalesOrderLine> myOrders = ref.watch(salesOrderLines);
+
+  late Customer myCustomer;
+  // late SalesOrder myOrderHeader;
+  // late List<SalesOrderLine> myOrders = ref.watch(salesOrderLines);
+  late Order order;
+  final debounce = Debouncer(delay: const Duration(milliseconds: 1000));
 
   FocusNode focusDiscount = FocusNode();
   TextEditingController txtRunningNo = TextEditingController();
@@ -94,12 +105,32 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if(ITEMS.isEmpty) {
+        ITEMS = await ApiService().getItems();
+      }
+
+      if(UNITS.isEmpty) {
+        UNITS = await ApiService().getUnits();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     // var orders = ref.watch(salesOrderLines);
-    myOrders = ref.watch(salesOrderLines);
+    myCustomer = ref.watch(myCustomerProvider);
+    final myOrderHeader = ref.watch(salesOrder);
+    final myOrders = ref.watch(salesOrderLines);
+    order = totalSummary(myOrderHeader, myOrders);
+    ref.read(salesOrder.notifier).edit(order.header);
 
     return Scaffold(
         appBar: AppBar(
@@ -297,7 +328,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                       padding: const EdgeInsets.symmetric(horizontal: 10.0),
                       child: TextFormField(
                         readOnly: true,
-                        initialValue: '${EMPLOYEE?.displayName ?? ''} (${EMPLOYEE?.code ?? ''})',
+                        initialValue: '${EMPLOYEE?.name ?? ''} (${EMPLOYEE?.code ?? ''})',
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           contentPadding:
@@ -317,7 +348,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                       child: TextFormField(
                         readOnly: true,
                         maxLines: 2,
-                        initialValue: '${CUSTOMER?.displayName ?? ''} (${CUSTOMER?.code ?? ''})',
+                        initialValue: '${myCustomer?.displayName ?? ''} (${myCustomer?.code ?? ''})',
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 15.0),
@@ -457,19 +488,20 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                   children: [
                     SizedBox(height: 80),
                     Container(
-                      margin: EdgeInsets.only(top: 11),
-                      padding: EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(top: 11),
+                      padding: const EdgeInsets.all(10),
                       width: MediaQuery.of(context).size.width - 20,
-                      child: Text(
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(20),
+                            bottomRight: Radius.circular(0)
+                        ),
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      child: const Text(
                         'รายการสินค้าขาย',
                         style: TextStyle(
                             color: Colors.white, fontSize: 20),
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(20),
-                            bottomRight: Radius.circular(0)),
-                        color: Theme.of(context).primaryColor,
                       ),
                     ),
 
@@ -486,7 +518,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                   ],
                 ),
 
-                salesOrderDetail(),
+                salesOrderDetail(myOrders),
 
                 Row(
                   children: [
@@ -496,8 +528,8 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                                 primary: Colors.blueAccent,
-                                padding: EdgeInsets.all(10),
-                                shape: RoundedRectangleBorder(
+                                padding: const EdgeInsets.all(10),
+                                shape: const RoundedRectangleBorder(
                                     borderRadius: BorderRadius.all(Radius.circular(20.0))
                                 )
                             ),
@@ -513,7 +545,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                               //   // calculateSummary();
                               // }
                             },
-                            icon: Icon(Icons.list, color: Colors.white),
+                            icon: const Icon(Icons.list, color: Colors.white),
                             label: const Text(
                               'รายการโปรโมชั่น',
                               style: TextStyle(
@@ -529,24 +561,22 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                                 primary: Colors.deepOrange[400],
-                                padding: EdgeInsets.all(10),
-                                shape: RoundedRectangleBorder(
+                                padding: const EdgeInsets.all(10),
+                                shape: const RoundedRectangleBorder(
                                     borderRadius: BorderRadius.all(Radius.circular(20.0))
                                 )
                             ),
                             onPressed: () async {
-                              // globals.editingProductCart = null;
-                              //
-                              // await Navigator.push(
-                              //     context,
-                              //     MaterialPageRoute(
-                              //         builder: (context) =>
-                              //             OrderExpressPortrait(type: DocumentType.order,))
-                              // );
-
+                              await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const ItemAddExpressPortrait(type: Activity.order,)
+                                  )
+                              );
                               // calculateSummary();
                             },
-                            icon: Icon(Icons.local_fire_department,
+                            icon: const Icon(Icons.local_fire_department,
                                 color: Colors.white),
                             label: const Text(
                               'รายการด่วน',
@@ -598,16 +628,17 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                       margin: const EdgeInsets.only(top: 11),
                       padding: const EdgeInsets.all(10),
                       width: MediaQuery.of(context).size.width - 20,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                            topRight: Radius.circular(20),
+                            bottomRight: Radius.circular(0)
+                        ),
+                        color: Theme.of(context).primaryColor,
+                      ),
                       child: const Text(
                         'ส่วนท้ายรายการ',
                         style: TextStyle(
                             color: Colors.white, fontSize: 20),
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(20),
-                            bottomRight: Radius.circular(0)),
-                        color: Theme.of(context).primaryColor,
                       ),
                     ),
                   ],
@@ -618,8 +649,16 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                     Padding(
                       padding: const EdgeInsets.only(left: 8.0),
                       child: ElevatedButton.icon(
-                        onPressed: () {
+                        onPressed: () async {
                           // _showRemarkDialog(context);
+                          List<Remark> allRemarks = await ApiService().getRemark();
+                          Remark? result = await SharedWidgets.showRemark(context, allRemarks);
+
+                          if(result != null) {
+                            myOrderHeader.salecmttxt += result.remark!;
+                            ref.read(salesOrder.notifier).edit(myOrderHeader);
+                            txtRemark.text = myOrderHeader.salecmttxt;
+                          }
                         },
                         icon: const Icon(Icons.add_comment),
                         label: const Text(
@@ -636,7 +675,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                   child: TextFormField(
                     controller: txtRemark,
                     maxLength: 80,
-                    maxLines: 8,
+                    maxLines: 3,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(
@@ -656,47 +695,61 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                   height: 10.0,
                 ),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextFormField(
-                          readOnly: true,
-                          controller: txtDiscountTotal,
-                          textAlign: TextAlign.right,
-                          decoration: const InputDecoration(
-                            labelText: 'รวมส่วนลด',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 0),
-                            // floatingLabelBehavior: FloatingLabelBehavior.never,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('รวมส่วนลด')),
+                      Expanded(
+                          child: Text(CURRENCY.format(myOrders.sumBy((e) => e.discountAmount ?? 0)), textAlign: TextAlign.right,)
+                      )
+                      // Expanded(
+                      //   child: Container(
+                      //     padding: const EdgeInsets.all(8.0),
+                      //     child: TextFormField(
+                      //       readOnly: true,
+                      //       controller: txtDiscountTotal,
+                      //       textAlign: TextAlign.right,
+                      //       decoration: const InputDecoration(
+                      //         labelText: 'รวมส่วนลด',
+                      //         border: OutlineInputBorder(),
+                      //         contentPadding: EdgeInsets.symmetric(
+                      //             horizontal: 10, vertical: 0),
+                      //         // floatingLabelBehavior: FloatingLabelBehavior.never,
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
+                    ],
+                  ),
                 ),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: TextFormField(
-                          readOnly: true,
-                          controller: txtPriceTotal,
-                          textAlign: TextAlign.right,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                            // floatingLabelBehavior: FloatingLabelBehavior.never,
-                            labelText: 'รวมเงิน',
-                          ),
-                        ),
-                      ),
-                    )
-                  ],
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('รวมเงิน')),
+                      Expanded(
+                          child: Text(CURRENCY.format(order.header.grandtotal), textAlign: TextAlign.right,)
+                      )
+                      // Expanded(
+                      //   child: Padding(
+                      //     padding: const EdgeInsets.all(10.0),
+                      //     child: TextFormField(
+                      //       readOnly: true,
+                      //       controller: txtPriceTotal,
+                      //       textAlign: TextAlign.right,
+                      //       decoration: const InputDecoration(
+                      //         border: OutlineInputBorder(),
+                      //         contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                      //         // floatingLabelBehavior: FloatingLabelBehavior.never,
+                      //         labelText: 'รวมเงิน',
+                      //       ),
+                      //     ),
+                      //   ),
+                      // )
+                    ],
+                  ),
                 ),
 
                 Row(
@@ -705,11 +758,20 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                     Padding(
                       padding: const EdgeInsets.only(left: 8.0),
                       child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             // showDiscountTypeDialog();
                             //focusDiscount.requestFocus();
+                            if (myOrderHeader.discountType == 'THB') {
+                              myOrderHeader.discountType = 'PER';
+                            } else {
+                              myOrderHeader.discountType = 'THB';
+                            }
+
+                            setState(() {
+                              ref.read(salesOrder.notifier).edit(myOrderHeader);
+                            });
                           },
-                        child: Container(),
+                        child: SharedWidgets.discountType(myOrderHeader.discountType ?? 'PER'),
                           // child: setDiscountType()
                       ),
                     ),
@@ -753,41 +815,64 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                                     type: QuickAlertType.success,
                                   );
 
-                                } else if (myOrderHeader.discountType ==
-                                    'PER') {
-                                  myOrderHeader.discountAmount =
-                                      double.tryParse(txtDiscountBill.text
-                                          .replaceAll(',', ''));
-                                  FocusScope.of(context).unfocus();
+                                } else if (myOrderHeader.discountType == 'PER') {
+                                  myOrderHeader.invdiscountpct = double.tryParse(txtDiscountBill.text.replaceAll(',', ''));
                                 } else {
-
                                   double? disc = double.tryParse(txtDiscountBill.text.replaceAll(',', ''));
 
                                   // globals.discountBill.number = disc;
-                                  myOrderHeader.discountAmount = disc;
-
-                                  FocusScope.of(context).unfocus();
+                                  myOrderHeader.invdiscountamt = disc;
                                 }
 
+                                Order order = totalSummary(myOrderHeader, myOrders);
+                                ref.read(salesOrder.notifier).edit(order.header);
+                                FocusScope.of(context).unfocus();
                                 // calculateSummary();
                               });
                             },
                             onChanged: (text) {
-                              const duration = Duration(milliseconds: 1000); // set the duration that you want call search() after that.
-                              if (timer != null) {
-                                setState(() => timer.cancel()); // clear timer
-                              }
+                              debounce.call(() {
+                                if(text.isEmpty) {
+                                  return SharedWidgets.showAlert(context, 'แจ้งเตือน', 'กรุณากรอกส่วนลด');
+                                }
+                                else{
+                                  if(double.tryParse(text) == null){
+                                    return SharedWidgets.showAlert(context, 'แจ้งเตือน', 'กรุณากรอกเฉพาะตัวเลข');
+                                  }
+                                }
 
-                              timer = Timer(duration, () =>
-                                  setState(() {
-                                    if(text.isEmpty) {
-                                      return SharedWidgets.showAlert(context, 'แจ้งเตือน', 'กรุณากรอกส่วนลด');
-                                    }
-                                    else{
-                                      if(double.tryParse(text) == null){
-                                        return SharedWidgets.showAlert(context, 'แจ้งเตือน', 'กรุณากรอกเฉพาะตัวเลข');
-                                      }
-                                    }
+                                if (myOrderHeader.discountType == 'PER' &&
+                                    double.tryParse(text.replaceAll(',', ''))! > 100) {
+
+                                } else if (myOrderHeader.discountType == 'PER') {
+                                  myOrderHeader.invdiscountpct = double.tryParse(txtDiscountBill.text.replaceAll(',', ''));
+                                } else {
+                                  double? disc = double.tryParse(text.replaceAll(',', ''));
+
+                                  // myOrderHeader.discountType = disc;
+                                  myOrderHeader.invdiscountamt = disc;
+                                }
+
+                                Order order = totalSummary(myOrderHeader, myOrders);
+                                ref.read(salesOrder.notifier).edit(order.header);
+                                FocusScope.of(context).unfocus();
+                              });
+
+                              // const duration = Duration(milliseconds: 1000); // set the duration that you want call search() after that.
+                              // if (timer != null) {
+                              //   setState(() => timer.cancel()); // clear timer
+                              // }
+
+                              // timer = Timer(duration, () =>
+                              //     setState(() {
+                              //       if(text.isEmpty) {
+                              //         return SharedWidgets.showAlert(context, 'แจ้งเตือน', 'กรุณากรอกส่วนลด');
+                              //       }
+                              //       else{
+                              //         if(double.tryParse(text) == null){
+                              //           return SharedWidgets.showAlert(context, 'แจ้งเตือน', 'กรุณากรอกเฉพาะตัวเลข');
+                              //         }
+                              //       }
 
                                     // if (globals.discountBill.type == 'PER' &&
                                     //     double.tryParse(txtDiscountBill.text
@@ -824,8 +909,8 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                                     // }
                                     //
                                     // calculateSummary();
-                                  })
-                              );
+                              //     })
+                              // );
                             },
                             decoration: const InputDecoration(
                               labelText: 'ส่วนลดท้ายบิล',
@@ -838,77 +923,101 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                         ))
                   ],
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: TextFormField(
-                            readOnly: true,
-                            controller: txtPriceAfterDiscount,
-                            textAlign: TextAlign.right,
-                            decoration: const InputDecoration(
-                              labelText: 'ยอดก่อนรวมภาษี',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 0),
-                              // floatingLabelBehavior: FloatingLabelBehavior.never,
-                              //border: OutlineInputBorder()
-                            ),
-                          ),
-                        ))
-                  ],
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('ยอดก่อนรวมภาษี')),
+                      Expanded(
+                          child: Text(CURRENCY.format(order.header.aftrdiscountTotal ?? 0), textAlign: TextAlign.right,)
+                      )
+                      // Expanded(
+                      //     child: Padding(
+                      //       padding: const EdgeInsets.all(8.0),
+                      //       child: TextFormField(
+                      //         readOnly: true,
+                      //         controller: txtPriceAfterDiscount,
+                      //         textAlign: TextAlign.right,
+                      //         decoration: const InputDecoration(
+                      //           labelText: 'ยอดก่อนรวมภาษี',
+                      //           border: OutlineInputBorder(),
+                      //           contentPadding: EdgeInsets.symmetric(
+                      //               horizontal: 10, vertical: 0),
+                      //           // floatingLabelBehavior: FloatingLabelBehavior.never,
+                      //           //border: OutlineInputBorder()
+                      //         ),
+                      //       ),
+                      //     )
+                      // )
+                    ],
+                  ),
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: TextFormField(
-                            readOnly: true,
-                            controller: txtVatTotal,
-                            textAlign: TextAlign.right,
-                            decoration: const InputDecoration(
-                              labelText: 'ภาษี 7%',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 0),
-                              // floatingLabelBehavior: FloatingLabelBehavior.never,
-                              //border: OutlineInputBorder()
-                            ),
-                          ),
-                        ))
-                  ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('ภาษี 7%')),
+                      Expanded(
+                          child: Text(CURRENCY.format(order.header.vatamount), textAlign: TextAlign.right,)
+                      )
+                      // Expanded(
+                      //     child: Padding(
+                      //       padding: const EdgeInsets.all(8.0),
+                      //       child: TextFormField(
+                      //         readOnly: true,
+                      //         controller: txtVatTotal,
+                      //         textAlign: TextAlign.right,
+                      //         decoration: const InputDecoration(
+                      //           labelText: 'ภาษี 7%',
+                      //           border: OutlineInputBorder(),
+                      //           contentPadding: EdgeInsets.symmetric(
+                      //               horizontal: 10, vertical: 0),
+                      //           // floatingLabelBehavior: FloatingLabelBehavior.never,
+                      //           //border: OutlineInputBorder()
+                      //         ),
+                      //       ),
+                      //     )
+                      // )
+                    ],
+                  ),
                 ),
-                Row(
-                  children: [
-                    // SizedBox(
-                    //   width: 195,
-                    //   child: Text('ยอดสุทธิ',
-                    //       textAlign: TextAlign.right,
-                    //       style: TextStyle(
-                    //           fontSize: 18,
-                    //           fontWeight: FontWeight.bold)),
-                    // ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextFormField(
-                          readOnly: true,
-                          controller: txtNetTotal,
-                          textAlign: TextAlign.right,
-                          decoration: const InputDecoration(
-                            labelText: 'ยอดสุทธิ',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 0),
-                            // floatingLabelBehavior: FloatingLabelBehavior.never,
-                            //border: OutlineInputBorder()
-                          ),
-                        ),
-                      ),
-                    )
-                  ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // SizedBox(
+                      //   width: 195,
+                      //   child: Text('ยอดสุทธิ',
+                      //       textAlign: TextAlign.right,
+                      //       style: TextStyle(
+                      //           fontSize: 18,
+                      //           fontWeight: FontWeight.bold)),
+                      // ),
+                      const Expanded(child: Text('ยอดสุทธิ', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),)),
+                      Expanded(
+                          child: Text(CURRENCY.format(order.header.grandtotal), textAlign: TextAlign.right, style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),)
+                      )
+                      // Expanded(
+                      //   child: Padding(
+                      //     padding: const EdgeInsets.all(8.0),
+                      //     child: TextFormField(
+                      //       readOnly: true,
+                      //       controller: txtNetTotal,
+                      //       textAlign: TextAlign.right,
+                      //       decoration: const InputDecoration(
+                      //         labelText: 'ยอดสุทธิ',
+                      //         border: OutlineInputBorder(),
+                      //         contentPadding: EdgeInsets.symmetric(
+                      //             horizontal: 10, vertical: 0),
+                      //         // floatingLabelBehavior: FloatingLabelBehavior.never,
+                      //         //border: OutlineInputBorder()
+                      //       ),
+                      //     ),
+                      //   ),
+                      // )
+                    ],
+                  ),
                 ),
 
                 Row(
@@ -920,11 +1029,11 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                             height: 100,
                             padding: const EdgeInsets.only(top: 25, bottom: 25, left: 8.0, right: 5.0),
                             child: ElevatedButton.icon(
-                              icon: Icon(Icons.attach_file, size: 22,),
-                              label: Text('แนบเอกสาร', style: TextStyle(fontSize: 14),),
+                              icon: const Icon(Icons.attach_file, size: 22,),
+                              label: const Text('แนบเอกสาร', style: TextStyle(fontSize: 14),),
                               style: ElevatedButton.styleFrom(
                                 primary: Colors.orange[600],
-                                shape: RoundedRectangleBorder(
+                                shape: const RoundedRectangleBorder(
                                     borderRadius: BorderRadius.all(Radius.circular(30.0))
                                 ),
                               ),
@@ -954,12 +1063,12 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                           ),
                           style: ElevatedButton.styleFrom(
                             primary: Colors.green,
-                            shape: RoundedRectangleBorder(
+                            shape: const RoundedRectangleBorder(
                                 borderRadius: BorderRadius.all(Radius.circular(30.0))
                             ),
                           ),
                           onPressed: () async {
-                            var isConfirm = await orderValidation();
+                            var isConfirm = await orderValidation(myOrders);
 
                             if(isConfirm == true) {
                               AwesomeDialog(
@@ -1058,7 +1167,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                         padding: const EdgeInsets.symmetric(vertical: 18.0)
                     ),
                     onPressed: () async {
-                      var isConfirm = await orderValidation();
+                      var isConfirm = await orderValidation(myOrders);
 
                       if(isConfirm == true) {
                         AwesomeDialog(
@@ -1144,15 +1253,15 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
     );
   }
 
-  salesOrderDetail() {
+  salesOrderDetail(List<SalesOrderLine> orderLines) {
     return ListView(
       primary: false,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
 
-      children: myOrders.mapIndexed((index, e) {
-        String goodsCode = ITEMS.firstWhere((product) => product.id == e.itemId, orElse: () => Item()).code ?? '';
-        String goodsName = ITEMS.firstWhere((product) => product.id == e.itemId, orElse: () => Item()).displayName ?? '';
+      children: orderLines.mapIndexed((index, e) {
+        String goodsCode = ITEMS.firstWhere((product) => product.no == e.itemCode, orElse: () => Item()).no ?? '';
+        String goodsName = ITEMS.firstWhere((product) => product.no == e.itemCode, orElse: () => Item()).description ?? '';
         String unitName = UNITS.firstWhere((unit) => unit.id == e.unitOfMeasureId, orElse: () => Unit()).displayName ?? '';
 
         Color flagFreeColor = e.unitPrice == 0 ? Colors.lightGreen : Colors.orangeAccent;
@@ -1165,20 +1274,26 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 5.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
                     child: Badge(
-                      toAnimate: false,
-                      shape: BadgeShape.square,
-                      badgeColor: flagFreeColor,
-                      borderRadius: BorderRadius.circular(15.0),
-                      badgeContent: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                        child: Text('สินค้า${e.unitPrice == 0 ? 'แถมฟรี' : 'เพื่อขาย'}', style: TextStyle(color: Colors.white, fontSize: 12.0)),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      backgroundColor: flagFreeColor,
+                      textStyle: GoogleFonts.kanit(fontSize: 10.0),
+                      label: Text(e.unitPrice == 0 ? 'แถมฟรี' : 'เพื่อขาย'),
                     ),
+                    // child: Badge(
+                    //   toAnimate: false,
+                    //   shape: BadgeShape.square,
+                    //   badgeColor: flagFreeColor,
+                    //   borderRadius: BorderRadius.circular(15.0),
+                    //   badgeContent: Padding(
+                    //     padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                    //     child: Text('สินค้า${e.unitPrice == 0 ? 'แถมฟรี' : 'เพื่อขาย'}', style: TextStyle(color: Colors.white, fontSize: 12.0)),
+                    //   ),
+                    // ),
                   ),
 
-                  Text(' ${CURRENCY.format(e.quantity)} x $unitName', style: TextStyle(fontSize: 14.0),),
+                  Text('${CURRENCY.format(e.quantity)} x $unitName', style: const TextStyle(fontSize: 14.0),),
                 ],
               )
             ],
@@ -1188,7 +1303,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
             children: [
               Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text('ส่วนลด ${e.discountType == 'PER' ? '${CURRENCY.format(e.discountPercent ?? 0)}%' : CURRENCY.format(e.discountAmount ?? 0)}', style: TextStyle(fontSize: 14.0),)
+                  child: Text('ส่วนลด ${e.discountType == 'PER' ? '${CURRENCY.format(e.discountPercent ?? 0)}%' : CURRENCY.format(e.discountAmount ?? 0)}', style: const TextStyle(fontSize: 14.0),)
               ),
               Row(
                 children: [
@@ -1206,17 +1321,13 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                         if(result != null) {
                           if(result == 'Remove') {
                             // myOrders.removeWhere((x) => x.id == e.id);
-                            ref.read(salesOrderLines.notifier).remove(myOrders.firstWhere((x) => x.id == e.id));
+                            ref.read(salesOrderLines.notifier).remove(orderLines.firstWhere((x) => x.id == e.id));
                           }
                           else{
                             // myOrders[myOrders.indexWhere((x) => x.id == e.id)] = res;
                             ref.read(salesOrderLines.notifier).edit(result);
                           }
                         }
-
-                        setState(() {
-
-                        });
                       },
                     ),
                   ),
@@ -1224,7 +1335,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
                   TextButton(
                       onPressed: (){
                         int index = 1;
-                        SalesOrderLine item = myOrders.firstWhere((x) => x.id == e.id);
+                        SalesOrderLine item = orderLines.firstWhere((x) => x.id == e.id);
 
                         ref.read(salesOrderLines.notifier).remove(item);
 
@@ -1261,7 +1372,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
     );
   }
 
-  orderValidation() async {
+  orderValidation(List<SalesOrderLine> orderLines) async {
     if (txtDocuNo.text == '') {
       return SharedWidgets.showAlert(
           context,
@@ -1269,7 +1380,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
           'กรุณาลองเข้าหน้าทำรายการอีกครั้ง');
     }
 
-    if (myOrders.isEmpty) {
+    if (orderLines.isEmpty) {
       return SharedWidgets.showAlert(context, 'โปรดเพิ่มรายการสินค้า', 'คุณยังไม่มีรายการสินค้า');
     }
 
@@ -1279,7 +1390,7 @@ class _SalesOrderCreatePortraitState extends ConsumerState<SalesOrderCreatePortr
       return SharedWidgets.showAlert(context, 'ยอดสั่งเกินวงเงินของลูกค้า', 'วงเงินของลูกค้าไม่เพียงพอในการสั่ง \n คงเหลือ = ${CURRENCY.format(limitAmount)}');
     }
 
-    if(!checkMixedVat(myOrders)) {
+    if(!checkMixedVat(orderLines)) {
       return await SharedWidgets.showConfirm(context, 'มีสินค้าคิด VAT & Non-VAT รวมกัน', 'คุณต้องการทำการสั่งขายอยู่หรือไม่ ?', 'ใช่, สร้างใบสั่งขาย', 'ยกเลิก') ?? false;
     }
     else{

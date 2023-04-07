@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dynamics_crm/models/unit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/customer.dart';
 import '../models/item.dart';
 import '../models/sales_order.dart';
 import '../models/sales_order_line.dart';
@@ -34,11 +35,22 @@ class FileNotifier extends StateNotifier<List<File>> {
   }
 }
 
+/// Customer
+var myCustomerProvider = StateNotifierProvider<CustomerNotifier, Customer>((ref) => CustomerNotifier());
+
+/// Order Cart
+var orderCart = StateNotifierProvider<SalesOrderLineNotifier, List<SalesOrderLine>>((ref) => SalesOrderLineNotifier());
+
+/// Express Cart
+var expressCart = StateNotifierProvider<SalesOrderLineNotifier, List<SalesOrderLine>>((ref) => SalesOrderLineNotifier());
+var expressItem = StateNotifierProvider<SalesOrderLineNotifier, List<SalesOrderLine>>((ref) => SalesOrderLineNotifier());
+
 /// Sales Order
 var items = StateNotifierProvider<ItemNotifier, List<Item>>((ref) => ItemNotifier([]));
 var itemsCart = StateNotifierProvider<ItemNotifier, List<Item>>((ref) => ItemNotifier([]));
 var itemsFilter = StateNotifierProvider<ItemNotifier, List<Item>>((ref) => ItemNotifier([]));
 var units = StateNotifierProvider<UnitNotifier, List<Unit>>((ref) => UnitNotifier());
+var mySalesOrder = StateNotifierProvider<SalesOrderListNotifier, List<SalesOrder>>((ref) => SalesOrderListNotifier([]));
 var salesOrder = StateNotifierProvider<SalesOrderNotifier, SalesOrder>((ref) => SalesOrderNotifier());
 var salesOrderLines = StateNotifierProvider<SalesOrderLineNotifier, List<SalesOrderLine>>((ref) => SalesOrderLineNotifier());
 var salesOrderDraft = StateNotifierProvider<SalesOrderNotifier, SalesOrder>((ref) => SalesOrderNotifier());
@@ -50,13 +62,14 @@ var salesOrderLinesCopy = StateNotifierProvider<SalesOrderLineNotifier, List<Sal
 var salesOrderAttach = StateNotifierProvider<FileNotifier, List<File>>((ref) => FileNotifier());
 
 /// Quotation
-var salesQuote = StateNotifierProvider<SalesQuoteNotifier, List<SalesQuote>>((ref) => SalesQuoteNotifier([]));
+var salesQuote = StateNotifierProvider<SalesQuoteNotifier, SalesQuote>((ref) => SalesQuoteNotifier());
 var salesQuoteLines = StateNotifierProvider<SalesQuoteLineNotifier, List<SalesQuoteLine>>((ref) => SalesQuoteLineNotifier([]));
-var salesQuoteDraft = StateNotifierProvider<SalesQuoteNotifier, List<SalesQuote>>((ref) => SalesQuoteNotifier([]));
+var salesQuoteDraft = StateNotifierProvider<SalesQuoteNotifier, SalesQuote>((ref) => SalesQuoteNotifier());
 var salesQuoteLinesDraft = StateNotifierProvider<SalesQuoteLineNotifier, List<SalesQuoteLine>>((ref) => SalesQuoteLineNotifier([]));
-var salesQuoteCopy = StateNotifierProvider<SalesQuoteNotifier, List<SalesQuote>>((ref) => SalesQuoteNotifier([]));
+var salesQuoteCopy = StateNotifierProvider<SalesQuoteNotifier, SalesQuote>((ref) => SalesQuoteNotifier());
 var salesQuoteLinesCopy = StateNotifierProvider<SalesQuoteLineNotifier, List<SalesQuoteLine>>((ref) => SalesQuoteLineNotifier([]));
 
 /// Utility
 var keywordOfSalesOrder = StateProvider((ref) => '');
-String loadingMessage = 'กำลังโหลด...';
+var loadingMessage = StateProvider((ref) => '');
+// String loadingMessage = 'กำลังโหลด...';

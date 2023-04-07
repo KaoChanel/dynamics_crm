@@ -1,22 +1,33 @@
-import 'package:dynamics_crm/ui/portrait/sales_order_create_portrait.dart';
+import 'package:dynamics_crm/ui/customer_list.dart';
+import 'package:dynamics_crm/ui/portrait/customer_select.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dynamics_crm/ui/portrait/sales_order_create_portrait.dart';
 
+import '../models/customer.dart';
+import '../providers/data_provider.dart';
 import '../widgets/menu_card.dart';
 
-class Report extends StatefulWidget {
+class Report extends ConsumerStatefulWidget {
   const Report({Key? key}) : super(key: key);
 
   @override
-  State<Report> createState() => _ReportState();
+  _ReportState createState() => _ReportState();
 }
 
-class _ReportState extends State<Report> {
+class _ReportState extends ConsumerState<Report> {
   double widthRate = 2;
+  TextEditingController txtCustomer = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
+    bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
     double widthSize = MediaQuery.of(context).size.width;
     widthRate = widthSize > 720 ? 4 : 2;
+
+    Customer myCustomer = ref.watch(myCustomerProvider);
+    txtCustomer.text = myCustomer.displayName ?? '';
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -25,7 +36,66 @@ class _ReportState extends State<Report> {
               const SizedBox(
                 height: 10,
               ),
+              Container(
+                  padding: const EdgeInsets.all(10),
+                  child: Row(
+                    children: [
+                      //Padding(padding: null)
+                      // SizedBox(
+                      // width: 60,
+                      // child: Text('ลูกค้า : ',
+                      //       style: TextStyle(fontSize: 18)),
+                      // ),
+                      Flexible(
+                          child: TextFormField(
+                              readOnly: true,
+                              controller: txtCustomer,
+                              textAlign: TextAlign.center,
+                              decoration: const InputDecoration(
+                                prefixIcon: Text(''),
+                                suffixIcon: Icon(Icons.arrow_drop_down),
+                                border: OutlineInputBorder(
+                                    borderRadius:
+                                    BorderRadius.all(Radius.circular(25.0))),
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 0),
+                                hintText: "ลูกค้าของคุณ",
+                              ),
+                              style: const TextStyle(fontSize: 14.0),
+                              onTap: () async {
+                                // globals.customerLocationPage = '';
 
+                                Customer? res;
+
+                                if(isPortrait){
+                                  await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => const CustomerSelect()
+                                      )
+                                  );
+                                }
+                                else{
+                                  await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => const CustomerList()
+                                      )
+                                  );
+                                }
+
+                                if(res != null) {
+                                  ref.read(myCustomerProvider.notifier).edit(res);
+                                }
+
+                                // setState(() {
+                                //   txtCustomer.text = myCustomer.displayName ?? '';
+                                // });
+                              })
+                      ),
+                    ],
+                  )
+              ),
               Wrap(
                 children: <Widget>[
                   SizedBox(
@@ -217,33 +287,6 @@ class _ReportState extends State<Report> {
                   SizedBox(
                       width: widthSize / widthRate,
                       child: Stack(children: [
-                        const MenuCard(title: 'ใบเสนอราคา', path: 'assets/sales_quotation_01.jpg'),
-                        Positioned.fill(
-                            child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(10),
-                                  onTap: () async {
-                                    var res = await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                            const SalesOrderCreatePortrait()));
-
-                                    if(res != null){
-                                      setState(() {
-
-                                      });
-                                    }
-                                  },
-                                )
-                            )
-                        )
-                      ])
-                  ),
-                  SizedBox(
-                      width: widthSize / widthRate,
-                      child: Stack(children: [
                         const MenuCard(title:'เอกสารของคุณ', path:'assets/invoices_01.jpg'),
                         Positioned.fill(
                             child: Material(
@@ -255,9 +298,10 @@ class _ReportState extends State<Report> {
                                         context,
                                         MaterialPageRoute(
                                             builder: (context) =>
-                                            const SalesOrderCreatePortrait()));
+                                            const SalesOrderCreatePortrait())
+                                    );
 
-                                    if(res != null){
+                                    if(res != null) {
                                       setState(() {
 
                                       });

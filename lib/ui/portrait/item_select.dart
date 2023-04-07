@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:dynamics_crm/models/debounce.dart';
 import 'package:dynamics_crm/models/item.dart';
 import 'package:dynamics_crm/providers/data_provider.dart';
+import 'package:dynamics_crm/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamics_crm/config/global_constants.dart';
 import 'package:dynamics_crm/models/activity.dart';
@@ -21,8 +23,8 @@ class ItemSelect extends ConsumerStatefulWidget {
 class _ItemSelectState extends ConsumerState<ItemSelect> {
   ScrollController scroll = ScrollController();
   TextEditingController keyword = TextEditingController();
-  late var allItems = ref.read(itemsFilter);
-  Timer? timer;
+  late List<Item> allItems = ref.read(itemsFilter);
+  final debouncer = Debouncer();
 
   @override
   void initState() {
@@ -30,7 +32,7 @@ class _ItemSelectState extends ConsumerState<ItemSelect> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      ref.read(itemsFilter.notifier).addList(ITEMS.take(50).toList());
+      ref.read(itemsFilter.notifier).addAll(ITEMS.take(35).toList());
     });
   }
 
@@ -44,7 +46,8 @@ class _ItemSelectState extends ConsumerState<ItemSelect> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.read(itemsFilter.notifier).addList(ITEMS.take(50).toList());
+          ITEMS = await ApiService().getItems();
+          ref.read(itemsFilter.notifier).addAll(ITEMS.take(35).toList());
         },
         child: SingleChildScrollView(
           child: Container(
@@ -62,25 +65,16 @@ class _ItemSelectState extends ConsumerState<ItemSelect> {
                             vertical: 0.0, horizontal: 10.0)
                     ),
                     onChanged: (String value) {
-                      // if(!mounted) return false;
+                      debouncer.call(() {
+                        var filtered = ITEMS
+                            .where((x) => x.description!.toLowerCase().contains(value.toLowerCase())
+                            || x.no!.toLowerCase().contains(value.toLowerCase())
+                          // || x.baseUnitOfMeasureCode!.toLowerCase().contains(value.toLowerCase())
+                          // || (x.postCode != null ? x.postCode.contains(value) : false)
+                        ).take(35).toList();
 
-                      const duration = Duration(
-                          milliseconds: 800); // set the duration that you want call search() after that.
-                      if (timer != null) {
-                        setState(() => timer!.cancel());
-                      }
-
-                        timer = Timer(duration, ()
-                        {
-                          var filtered = ITEMS
-                              .where((x) => x.displayName!.toLowerCase().contains(value.toLowerCase())
-                              || x.code!.toLowerCase().contains(value.toLowerCase())
-                              || x.baseUnitOfMeasureCode!.toLowerCase().contains(value.toLowerCase())
-                              // || (x.postCode != null ? x.postCode.contains(value) : false)
-                          ).take(50).toList();
-
-                          ref.read(itemsFilter.notifier).addList(filtered);
-                        });
+                        ref.read(itemsFilter.notifier).replace(filtered);
+                      });
                     },
                   ),
                 ),
@@ -125,9 +119,10 @@ class _ItemSelectState extends ConsumerState<ItemSelect> {
             borderRadius: BorderRadius.circular(10),
           ),
           child: InkWell(
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) =>
-                  ItemAddPortrait(type: widget.type, selectedItem: e)));
+            onTap: () async {
+              await Navigator.push(context, MaterialPageRoute(builder: (context) =>
+                  ItemAddPortrait(type: widget.type, selectedItem: e)
+              ));
             },
             child: Container(
               padding: const EdgeInsets.only(
@@ -139,14 +134,16 @@ class _ItemSelectState extends ConsumerState<ItemSelect> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(e.code ?? '', style: TextStyle(
-                            fontSize: 14.0, color: Colors.black45)),
+                        Text(e.no ?? '', style: const TextStyle(
+                            fontSize: 14.0, color: Colors.black45)
+                        ),
                         Container(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(e.displayName ?? '',
-                                style: TextStyle(fontSize: 16.0))),
+                            child: Text(e.description ?? '',
+                                style: const TextStyle(fontSize: 16.0))
+                        ),
                         Container(
-                          child: inStock ? const Text('พร้อมขาย',
+                          child: e.inventory! > 0 ? const Text('พร้อมขาย',
                             style: TextStyle(color: Colors.lightGreen,
                                 fontWeight: FontWeight.bold),) : Text(
                             'สินค้าหมด', style: TextStyle(

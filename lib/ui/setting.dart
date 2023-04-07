@@ -12,6 +12,7 @@ import 'package:quickalert/models/quickalert_type.dart';
 import 'package:quickalert/widgets/quickalert_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/customer.dart';
 import '../services/api_service.dart';
 import 'login.dart';
 
@@ -139,7 +140,7 @@ class _SettingState extends State<Setting> {
                     onTap: () {
                       // open edit profile
                     },
-                    title: Text(EMPLOYEE?.displayName ?? '',
+                    title: Text(EMPLOYEE?.name ?? '',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
@@ -295,7 +296,7 @@ class _SettingState extends State<Setting> {
                   color: Colors.white,
                   child: ListTile(
                     onTap: () async {
-                      CUSTOMER = null;
+                      CUSTOMER = Customer();
                       // globals.allCustomerByEmp = null;
                       // globals.allShipto = null;
                       // globals.allProduct = null;

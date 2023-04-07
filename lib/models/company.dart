@@ -6,6 +6,8 @@ import 'dart:convert';
 
 Company companyFromJson(String str) => Company.fromJson(json.decode(str));
 
+List<Company> companyListFromJson(String str) => List<Company>.from(json.decode(str).map((x) => Company.fromJson(x)));
+
 String companyToJson(Company data) => json.encode(data.toJson());
 
 class Company {

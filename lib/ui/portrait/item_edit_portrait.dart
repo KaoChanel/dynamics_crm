@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dynamics_crm/config/global_constants.dart';
+import 'package:dynamics_crm/models/debounce.dart';
 import 'package:dynamics_crm/models/sales_order_line.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +30,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
 
   Timer? searchOnStoppedTyping;
   bool _longPressCanceled = false;
+  final debouncer = Debouncer(delay: const Duration(milliseconds: 300));
 
   Item itemInfo = Item();
   SalesOrderLine orderItem = SalesOrderLine();
@@ -39,8 +41,9 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
     super.initState();
 
     orderItem = widget.editItem;
+    isPercent = orderItem.discountType == 'PER' ? true : false;
     itemInfo = ITEMS.firstWhere((e) => e.id == orderItem.itemId, orElse: () => Item());
-    amountCalculate();
+    bindingController();
   }
 
   @override
@@ -58,15 +61,15 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-                  child: Text(itemInfo.code ?? '', style: const TextStyle(fontSize: 14.0)),
+                  child: Text(itemInfo.no ?? '', style: const TextStyle(fontSize: 14.0)),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                  child: Text(itemInfo.displayName ?? '', style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold)),
+                  child: Text(itemInfo.description ?? '', style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold)),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-                  child: Text('${CURRENCY.format(itemInfo.unitPrice)} / ${widget.editItem?.unitOfMeasureCode ?? ''}', style: const TextStyle(fontSize: 14.0)),
+                  child: Text('${CURRENCY.format(itemInfo.unitPrice ?? 0)} / ${widget.editItem?.unitOfMeasureCode ?? ''}', style: const TextStyle(fontSize: 14.0)),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10.0),
@@ -74,7 +77,6 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       ElevatedButton(
-                        child: inStock ? Text('เช็คสต๊อค') : Text('ไม่มีของ'),
                         onPressed: !inStock ? null : () async {
                           FocusScope.of(context).unfocus();
                           if (widget.editItem == null) {
@@ -87,6 +89,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                             // showStock(context, widget.editItem.itemId);
                           }
                         },
+                        child: inStock ? const Text('เช็คสต๊อค') : const Text('ไม่มีของ'),
                       ),
                     ],
                   ),
@@ -98,7 +101,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                     textAlign: TextAlign.right,
                     controller: txtPrice,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: TextStyle(fontSize: 14.0),
+                    style: const TextStyle(fontSize: 14.0),
                     decoration: const InputDecoration(
                       labelText: 'ราคา / หน่วย',
                       hintText: 'ราคาขาย',
@@ -115,7 +118,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                     readOnly: true,
                     controller: txtTotal,
                     textAlign: TextAlign.right,
-                    style: TextStyle(fontSize: 14.0),
+                    style: const TextStyle(fontSize: 14.0),
                     decoration: const InputDecoration(
                       labelText: 'รวมราคา',
                       hintText: 'รวมราคา',
@@ -144,7 +147,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                               orderItem.discountType = 'THB';
                             }
 
-                            amountCalculate();
+                            bindingController();
                           },
                         ),
                       ),
@@ -156,7 +159,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                         child: TextFormField(
                           controller: txtDiscount,
                           textAlign: TextAlign.right,
-                          style: TextStyle(fontSize: 14.0),
+                          style: const TextStyle(fontSize: 14.0),
                           decoration: const InputDecoration(
                             labelText: 'ส่วนลด',
                             hintText: 'ส่วนลด',
@@ -189,7 +192,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
                   child: TextFormField(
-                    style: TextStyle(fontSize: 14.0),
+                    style: const TextStyle(fontSize: 14.0),
                     decoration: const InputDecoration(
                       labelText: 'หมายเหตุ',
                       hintText: 'หมายเหตุ',
@@ -227,7 +230,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                         orderItem.unitPrice = itemInfo.unitPrice;
                       }
 
-                      amountCalculate();
+                      bindingController();
                     },
                   ),
                 ),
@@ -263,7 +266,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                                 }
                               }
 
-                              amountCalculate();
+                              bindingController();
                             },
                           ),
                           onLongPress: () async {
@@ -277,7 +280,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                                     orderItem.quantity = orderItem.quantity! - 1;
                                   }
 
-                                  amountCalculate();
+                                  bindingController();
 
                                 });
                               }
@@ -343,7 +346,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                                 // orderItem.goodPrice = await getPrice();
                               }
 
-                              amountCalculate();
+                              bindingController();
                             },
                           ),
                           onLongPress: () async {
@@ -353,7 +356,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
                                 searchOnStoppedTyping = Timer.periodic(const Duration(milliseconds: 150), (timer) async {
                                   FocusScope.of(context).unfocus();
                                   orderItem.quantity = orderItem.quantity! + 1;
-                                  amountCalculate();
+                                  bindingController();
 
                                 });
                               }
@@ -496,21 +499,8 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
     Navigator.pop(context, orderItem);
   }
 
-  amountCalculate() {
-    if(!mounted) return;
+  bindingController() {
     setState(() {
-
-      if(orderItem.isFree) {
-        orderItem.unitPrice = 0;
-        newPrice = 0;
-      }
-
-      orderItem.amountBeforeDiscount = orderItem.quantity! * orderItem.unitPrice!;
-
-      orderItem = discountCalculate(isPercent, txtDiscount.text, orderItem);
-
-      orderItem.netAmount = orderItem.amountBeforeDiscount! - orderItem.discountAmount!;
-
       txtQty.text = NUMBER_FORMAT.format(orderItem.quantity);
       txtPrice.text = CURRENCY.format(orderItem.unitPrice);
 
@@ -527,6 +517,7 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
     if (searchOnStoppedTyping != null) {
       searchOnStoppedTyping!.cancel();
     }
+
     _longPressCanceled = true;
 
     if(newPrice > 0){
@@ -536,17 +527,11 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
       // productCart.goodPrice = await getPrice();
     }
 
-    amountCalculate();
+    bindingController();
   }
 
   _onChangeQty(String value) {
-    const duration = Duration(milliseconds:800); // set the duration that you want call search() after that.
-    if (searchOnStoppedTyping != null) {
-      setState(() => searchOnStoppedTyping!.cancel()); // clear timer
-    }
-
-    searchOnStoppedTyping = Timer(duration, ()
-    {
+    debouncer.call(() {
       if(double.tryParse(txtQty.text.replaceAll(',', '')) != null){
         orderItem.quantity = double.parse(txtQty.text.replaceAll(',', ''));
       }
@@ -557,18 +542,32 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
         txtQty.text = value;
       }
 
-      amountCalculate();
+      bindingController();
     });
+
+    // const duration = Duration(milliseconds:800); // set the duration that you want call search() after that.
+    // if (searchOnStoppedTyping != null) {
+    //   setState(() => searchOnStoppedTyping!.cancel()); // clear timer
+    // }
+    //
+    // searchOnStoppedTyping = Timer(duration, ()
+    // {
+    //   if(double.tryParse(txtQty.text.replaceAll(',', '')) != null){
+    //     orderItem.quantity = double.parse(txtQty.text.replaceAll(',', ''));
+    //   }
+    //   else if(value.isEmpty){
+    //     txtQty.text = '0';
+    //   }
+    //   else{
+    //     txtQty.text = value;
+    //   }
+    //
+    //   bindingController();
+    // });
   }
 
   _onChangePrice(String value) {
-    const duration = Duration(milliseconds:800); // set the duration that you want call search() after that.
-    if (searchOnStoppedTyping != null) {
-      setState(() => searchOnStoppedTyping!.cancel()); // clear timer
-    }
-
-    searchOnStoppedTyping = Timer(duration, ()
-    {
+    debouncer.call(() {
       if(double.tryParse(txtPrice.text.replaceAll(',', '')) != null){
         orderItem.unitPrice = double.parse(txtPrice.text.replaceAll(',', ''));
         newPrice = orderItem.unitPrice!;
@@ -580,22 +579,41 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
           orderItem.isFree = true;
         }
 
-        amountCalculate();
+        bindingController();
       }
       else{
         txtPrice.text = value;
       }
     });
+
+    // const duration = Duration(milliseconds:800); // set the duration that you want call search() after that.
+    // if (searchOnStoppedTyping != null) {
+    //   setState(() => searchOnStoppedTyping!.cancel()); // clear timer
+    // }
+    //
+    // searchOnStoppedTyping = Timer(duration, ()
+    // {
+    //   if(double.tryParse(txtPrice.text.replaceAll(',', '')) != null){
+    //     orderItem.unitPrice = double.parse(txtPrice.text.replaceAll(',', ''));
+    //     newPrice = orderItem.unitPrice!;
+    //
+    //     if(orderItem.unitPrice! > 0){
+    //       orderItem.isFree = false;
+    //     }
+    //     else{
+    //       orderItem.isFree = true;
+    //     }
+    //
+    //     bindingController();
+    //   }
+    //   else{
+    //     txtPrice.text = value;
+    //   }
+    // });
   }
 
   _onChangeDiscount(String value) {
-    const duration = Duration(milliseconds:800); // set the duration that you want call search() after that.
-    if (searchOnStoppedTyping != null) {
-      setState(() => searchOnStoppedTyping!.cancel()); // clear timer
-    }
-
-    searchOnStoppedTyping = Timer(duration, ()
-    {
+    debouncer.call(() {
       if(double.tryParse(txtDiscount.text.replaceAll(',', '')) != null){
         // productCart.discountBase = double.parse(txtDiscount.text.toString().replaceAll(',', ''));
       }
@@ -606,7 +624,27 @@ class _ItemEditPortraitState extends ConsumerState<ItemEditPortrait> {
         txtDiscount.text = value;
       }
 
-      amountCalculate();
+      bindingController();
     });
+
+    // const duration = Duration(milliseconds:800); // set the duration that you want call search() after that.
+    // if (searchOnStoppedTyping != null) {
+    //   setState(() => searchOnStoppedTyping!.cancel()); // clear timer
+    // }
+    //
+    // searchOnStoppedTyping = Timer(duration, ()
+    // {
+    //   if(double.tryParse(txtDiscount.text.replaceAll(',', '')) != null){
+    //     // productCart.discountBase = double.parse(txtDiscount.text.toString().replaceAll(',', ''));
+    //   }
+    //   else if(value.isEmpty){
+    //     txtDiscount.text = '0';
+    //   }
+    //   else{
+    //     txtDiscount.text = value;
+    //   }
+    //
+    //   bindingController();
+    // });
   }
 }

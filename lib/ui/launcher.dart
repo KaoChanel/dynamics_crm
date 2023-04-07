@@ -16,6 +16,8 @@ import 'home.dart';
 import 'package:http/http.dart' as http;
 import 'package:dynamics_crm/config/global_constants.dart';
 
+import 'news.dart';
+
 /// Create a [AndroidNotificationChannel] for heads up notifications
 // AndroidNotificationChannel channel;
 
@@ -33,18 +35,10 @@ class Launcher extends StatefulWidget {
 class _LauncherState extends State<Launcher> {
   late String _token;
   int _selectedIndex = 0;
-  int initialIndex = MY_COMPANY.displayName != 'IDEXX' ? 2 : 1;
+  int initialIndex = MY_COMPANY.displayName != 'IDEXX' ? 1 : 3;
 
   late PageController _pageController;
-  final List<Widget> _pageWidget = MY_COMPANY.displayName != 'IDEXX' ? <Widget>[
-    const Home(),
-    const Report(),
-    const Profile(),
-  ]
-      : <Widget>[
-    const Home(),
-    const Profile(),
-  ];
+  final List<Widget> _pageWidget = MY_COMPANY.displayName != 'IDEXX' ? [const Home(), const Report(), const News(), const Profile()] : [const Home(), const Profile()];
 
   final List<BottomNavigationBarItem> _menuBar = MY_COMPANY.name != 'IDEXX' ? <BottomNavigationBarItem>[
     const BottomNavigationBarItem(
@@ -55,10 +49,10 @@ class _LauncherState extends State<Launcher> {
       icon: Icon(Icons.bar_chart),
       label: 'Report',
     ),
-    // const BottomNavigationBarItem(
-    //   icon: Icon(Icons.info_outline_rounded),
-    //   label: 'News',
-    // ),
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.info_outline_rounded),
+      label: 'News',
+    ),
     const BottomNavigationBarItem(
       icon: Icon(Icons.person_rounded),
       label: 'Profile',
